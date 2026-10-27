@@ -422,9 +422,6 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         const float mix = juce::jlimit (0.0f, 1.0f, smoothMix);
         const float dryGain = std::cos (0.5f * juce::MathConstants<float>::pi * mix);
         const float wetGain = std::sin (0.5f * juce::MathConstants<float>::pi * mix);
-        const float wetL = wet[0] * (1.0f - pitchWetBlend) + shifted[0] * pitchWetBlend;
-        const float wetR = inputChannels > 1
-            ? wet[1] * (1.0f - pitchWetBlend) + shifted[1] * pitchWetBlend : wetL;
         buffer.setSample (0, n, dryL * dryGain + wetL * wetGain);
         if (outputChannels > 1) buffer.setSample (1, n, dryR * dryGain + wetR * wetGain);
 
