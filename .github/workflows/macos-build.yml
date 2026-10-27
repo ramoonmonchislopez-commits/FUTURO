@@ -73,6 +73,8 @@ jobs:
           test -f 'dist/FUTURO-Spring-Reverb-0.2.0-universal.pkg'
           lipo 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3/Contents/MacOS/FUTURO Spring Reverb' -verify_arch arm64 x86_64
           lipo 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component/Contents/MacOS/FUTURO Spring Reverb' -verify_arch arm64 x86_64
+          codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3'
+          codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component'
           pkgutil --payload-files 'dist/FUTURO-Spring-Reverb-0.2.0-universal.pkg' | grep -E 'Audio/Plug-Ins/(VST3|Components)/FUTURO Spring Reverb' >/dev/null
 
       - name: Archive plug-ins and checksums

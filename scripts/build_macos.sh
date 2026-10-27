@@ -39,6 +39,13 @@ if [[ -z "$AU_PATH" || ! -d "$AU_PATH" ]]; then
   exit 3
 fi
 
+# JUCE's VST3 manifest helper may write moduleinfo.json after the initial link/sign pass.
+# Re-sign after all bundle resources have been generated so the resource seal is current.
+codesign --force --deep --sign - "$VST3_PATH"
+codesign --force --deep --sign - "$AU_PATH"
+codesign --verify --deep --strict --verbose=2 "$VST3_PATH"
+codesign --verify --deep --strict --verbose=2 "$AU_PATH"
+
 # Assert that both architectures are actually present before packaging.
 VST3_BINARY="$VST3_PATH/Contents/MacOS/FUTURO Spring Reverb"
 AU_BINARY="$AU_PATH/Contents/MacOS/FUTURO Spring Reverb"
