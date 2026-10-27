@@ -69,6 +69,13 @@ private:
     float flexModPhase = 0.0f;
     std::array<float, maxChannels> characterLowpassState {};
 
+    // Linked stereo lookahead limiter preserves headroom without intentional saturation.
+    std::array<std::vector<float>, maxChannels> outputDelayBuffers;
+    size_t outputDelayWritePosition = 0;
+    size_t outputDelaySamples = 0;
+    float outputPeakEnvelope = 0.0f;
+    float outputPeakRelease = 0.999f;
+
     double currentSampleRate = 44100.0;
     float smoothMix = 0.25f;
     float smoothIntensity = 0.5f;
