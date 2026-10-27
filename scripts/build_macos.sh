@@ -6,7 +6,7 @@ BUILD_DIR="$ROOT/build-macos"
 ARCHS="arm64;x86_64"
 ARCH_LABEL="universal"
 DEPLOYMENT_TARGET="11.0"
-VERSION="0.2.0"
+VERSION="0.3.0"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "ERROR: this script must run on macOS." >&2
