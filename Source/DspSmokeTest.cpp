@@ -26,7 +26,7 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f)
+    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f)
     {
         FuturoSpringAudioProcessor processor;
         setParameter (processor, "mix", 1.0f);
@@ -48,8 +48,8 @@ namespace
             buffer.clear();
             if (offset == 0)
             {
-                buffer.setSample (0, 0, 1.0f);
-                buffer.setSample (1, 0, 0.75f);
+                buffer.setSample (0, 0, inputLevel);
+                buffer.setSample (1, 0, inputLevel * 0.75f);
             }
 
             processor.processBlock (buffer, midi);
@@ -165,6 +165,19 @@ int main()
             return 6;
         }
         std::cout << "PASS: mode " << mode << " TONE difference=" << toneDifference << "\n";
+    }
+
+    // A hot input must remain below digital full scale without using saturation.
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        const auto hot = renderImpulse (mode, 0.0f, 0.65f, 1.0f, 12.0f);
+        if (! hot.finite || hot.peak > 0.985f)
+        {
+            std::cerr << "FAIL: output headroom limiter did not contain peaks in mode " << mode
+                      << "; peak=" << hot.peak << "\n";
+            return 7;
+        }
+        std::cout << "PASS: mode " << mode << " clean output ceiling=" << hot.peak << "\n";
     }
 
     std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes.\n";
