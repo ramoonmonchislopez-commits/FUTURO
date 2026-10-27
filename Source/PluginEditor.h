@@ -26,7 +26,6 @@ private:
     juce::Slider mix, intensity, saturation, pitch, tone;
     juce::TextButton classic { "CLASSIC" }, flex { "FLEX" }, dream { "DREAM" };
     juce::Label heading, subheading;
-    juce::Label mixCaption, driveCaption, decayCaption, pitchCaption, toneCaption;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
