@@ -26,13 +26,13 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode)
+    RenderResult renderImpulse (int mode, float pitch = 0.0f)
     {
         FuturoSpringAudioProcessor processor;
         setParameter (processor, "mix", 1.0f);
         setParameter (processor, "intensity", 1.0f);
         setParameter (processor, "saturation", 0.0f);
-        setParameter (processor, "pitch", 0.0f);
+        setParameter (processor, "pitch", pitch);
         setParameter (processor, "tone", 0.65f);
         setParameter (processor, "mode", static_cast<float> (mode));
         processor.prepareToPlay (testRate, blockSize);
