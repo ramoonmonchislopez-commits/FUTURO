@@ -177,11 +177,11 @@ float FuturoSpringAudioProcessor::processDiffuser (int channel, int mode, float 
 float FuturoSpringAudioProcessor::readCharacterDelay (int channel, float delaySamples) const noexcept
 {
     if (characterBufferSize < 4) return 0.0f;
-    delaySamples = juce::jlimit (1.0f, static_cast<float> (pitchBufferSize - 2), delaySamples);
+    delaySamples = juce::jlimit (1.0f, static_cast<float> (characterBufferSize - 2), delaySamples);
     const float readPosition = static_cast<float> (characterWritePosition) - delaySamples;
     const float flooredPosition = std::floor (readPosition);
-    const int index0 = wrapIndex (static_cast<int> (flooredPosition), static_cast<int> (pitchBufferSize));
-    const int index1 = (index0 + 1) % static_cast<int> (pitchBufferSize);
+    const int index0 = wrapIndex (static_cast<int> (flooredPosition), static_cast<int> (characterBufferSize));
+    const int index1 = (index0 + 1) % static_cast<int> (characterBufferSize);
     const float fraction = readPosition - flooredPosition;
     const auto& data = characterBuffers[static_cast<size_t> (channel)];
     return data[static_cast<size_t> (index0)]
@@ -218,7 +218,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const int outputChannels = juce::jmin (maxChannels, getTotalNumOutputChannels());
     const int inputChannels = juce::jmin (maxChannels, getTotalNumInputChannels());
     const int numSamples = buffer.getNumSamples();
-    if (inputChannels < 1 || outputChannels < 1 || pitchBufferSize < 4) return;
+    if (inputChannels < 1 || outputChannels < 1 || characterBufferSize < 4) return;
     for (int channel = inputChannels; channel < outputChannels; ++channel)
         buffer.clear (channel, 0, numSamples);
 
@@ -447,7 +447,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         buffer.setSample (0, n, dryL * dryGain + wetL * wetGain);
         if (outputChannels > 1) buffer.setSample (1, n, dryR * dryGain + wetR * wetGain);
 
-        if (++pitchWritePosition >= pitchBufferSize) pitchWritePosition = 0;
+        if (++characterWritePosition >= characterBufferSize) characterWritePosition = 0;
     }
 }
 
