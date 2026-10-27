@@ -284,7 +284,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 // All loop gains are bounded. Even at maximum INTENSITY the per-loop
                 // gain stays comfortably below unity, so tails decay instead of building.
                 const float feedback = mode == 0 ? (0.52f + 0.32f * smoothIntensity)
-                                     : mode == 1 ? (0.46f + 0.29f * smoothIntensity)
+                                     : mode == 1 ? (0.50f + 0.34f * smoothIntensity)
                                                  : (0.56f + 0.27f * smoothIntensity);
                 const float excitation = mode == 0 ? 0.24f : mode == 1 ? 0.38f : 0.19f;
                 const float highFeedback = mode == 0 ? 0.38f
