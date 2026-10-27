@@ -94,7 +94,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     styleKnob (pitch, "PITCH");
     styleKnob (tone, "TONE");
 
-    for (auto* button : { &classic, &drip, &dream })
+    for (auto* button : { &classic, &flex, &dream })
     {
         button->setClickingTogglesState (true);
         button->setRadioGroupId (901);
@@ -107,11 +107,11 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     }
 
     classic.onClick = [this] { setMode (0); };
-    drip.onClick    = [this] { setMode (1); };
+    flex.onClick    = [this] { setMode (1); };
     dream.onClick   = [this] { setMode (2); };
 
     modeParam.addItem ("CLASSIC", 1);
-    modeParam.addItem ("DRIP", 2);
+    modeParam.addItem ("FLEX", 2);
     modeParam.addItem ("DREAM", 3);
     modeAtt = std::make_unique<ComboAttachment> (p.parameters, "mode", modeParam);
     modeParam.setVisible (false);
@@ -159,13 +159,13 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     visualMode = juce::jlimit (0, 2, mode);
     modeParam.setSelectedId (visualMode + 1, juce::sendNotificationSync);
     classic.setToggleState (visualMode == 0, juce::dontSendNotification);
-    drip.setToggleState (visualMode == 1, juce::dontSendNotification);
+    flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
     const auto accent = currentModeColour();
     for (auto* slider : { &mix, &intensity, &saturation, &pitch, &tone })
         slider->setColour (juce::Slider::rotarySliderFillColourId, accent);
-    for (auto* button : { &classic, &drip, &dream })
+    for (auto* button : { &classic, &flex, &dream })
         button->setColour (juce::TextButton::buttonOnColourId, accent);
     repaint();
 }
@@ -309,7 +309,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (ink);
     g.setFont (juce::Font (juce::FontOptions (10.5f, juce::Font::bold)));
-    g.drawText ("SPRING SPIRIT  /  " + juce::String (visualMode == 0 ? "CLASSIC" : visualMode == 1 ? "DRIP" : "DREAM"),
+    g.drawText ("SPRING SPIRIT  /  " + juce::String (visualMode == 0 ? "CLASSIC" : visualMode == 1 ? "FLEX" : "DREAM"),
                 0, 366, getWidth(), 18, juce::Justification::centred);
 
     g.setColour (ink.withAlpha (0.34f));
@@ -333,7 +333,7 @@ void FuturoSpringAudioProcessorEditor::resized()
 
     const int left = 34;
     classic.setBounds (left, 139, 116, 35);
-    drip.setBounds (left, 183, 116, 35);
+    flex.setBounds (left, 183, 116, 35);
     dream.setBounds (left, 227, 116, 35);
 
     const float fractions[5] { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f };
