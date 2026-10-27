@@ -389,7 +389,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             // FLEX / BLOOM: an elastic spring rebound instead of a doubler/flanger.
             // A modulated 25-65ms feedback path blooms into quieter rebounds.
-            // Its loop coefficient stays below 0.92, allowing the repeats to decay.
+            // Its loop coefficient stays below 0.88, allowing the repeats to decay.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
                 const float phase = characterPhase + static_cast<float> (channel) * 0.72f;
@@ -398,7 +398,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const float other = inputChannels > 1
                     ? readCharacterDelay (1 - channel, delay * 0.96f) : own;
                 const float rebound = own * 0.84f + other * 0.16f;
-                const float feedback = character * (0.58f + 0.34f * character);
+                const float feedback = character * (0.56f + 0.32f * character);
                 wet[channel] = wet[channel] * (1.0f - 0.20f * character)
                              + rebound * feedback;
             }
@@ -428,6 +428,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         if (characterPhase >= twoPi)
             characterPhase -= twoPi;
 
+        // Capture the feedback signal before the output tone shelf. This keeps TONE
+        // from multiplying the feedback loop and preserves a decaying, clean tail.
+        const float characterFeedbackWet[2] { wet[0], wet[1] };
+
         // DREAM widens only the recombined wet field while keeping the centre stable.
         if (inputChannels > 1 && modePosition > 1.0f)
         {
@@ -453,7 +457,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         // store the clean spring field to keep their movement effects from self-building.
         for (int channel = 0; channel < inputChannels; ++channel)
             characterBuffers[static_cast<size_t> (channel)][characterWritePosition]
-                = (modePosition >= 0.5f && modePosition < 1.5f) ? wet[channel] : characterInputWet[channel];
+                = (modePosition >= 0.5f && modePosition < 1.5f) ? characterFeedbackWet[channel] : characterInputWet[channel];
 
         const float wetL = wet[0];
         const float wetR = inputChannels > 1 ? wet[1] : wetL;
