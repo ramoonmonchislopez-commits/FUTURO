@@ -288,7 +288,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const float feedback = mode == 0 ? (0.52f + 0.32f * smoothIntensity)
                                      : mode == 1 ? (0.46f + 0.29f * smoothIntensity)
                                                  : (0.56f + 0.27f * smoothIntensity);
-                const float excitation = mode == 0 ? 0.24f : mode == 1 ? 0.34f : 0.19f;
+                const float excitation = mode == 0 ? 0.24f : mode == 1 ? 0.38f : 0.19f;
                 const float highFeedback = mode == 0 ? 0.38f
                                          : mode == 1 ? juce::jlimit (0.78f, 0.95f, 0.86f + flexMotion)
                                                      : 0.16f;
@@ -332,7 +332,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const float modeGain = mode == 0 ? (1.12f + 0.25f * smoothIntensity)
                                       : mode == 1 ? (1.28f + 0.30f * smoothIntensity)
                                                   : (0.91f + 0.18f * smoothIntensity);
-                const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.13f : 0.23f;
+                const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.21f : 0.23f;
                 const float tail = output * modeGain;
                 wetTailByMode[mode][channel] = mode == 0
                     ? saturateVintage (tail, 4.0f + smoothSaturation * 1.1f)
