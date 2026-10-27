@@ -129,6 +129,7 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
         }
 
     dampingState.fill (0.0f);
+    wetPresenceLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
     minimumPitchDelaySamples = fs * 0.020f;
     pitchSweepRangeSamples = fs * 0.090f;
@@ -154,6 +155,7 @@ void FuturoSpringAudioProcessor::releaseResources()
     for (auto& channel : pitchBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
     resonatorDamping.fill (0.0f);
     dampingState.fill (0.0f);
+    wetPresenceLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
 }
 
@@ -215,6 +217,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float targetMode = parameters.getRawParameterValue ("mode")->load();
     const float fs = static_cast<float> (currentSampleRate);
     const float inputLPAlpha = 1.0f - std::exp (-twoPi * 2300.0f / fs);
+    const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1900.0f / fs);
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -295,10 +298,15 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     output += delayed[stage] * resonatorGains[mode][stage];
                 }
 
-                const float modeGain = mode == 0 ? (0.82f + 0.22f * smoothIntensity)
-                                      : mode == 1 ? (1.08f + 0.24f * smoothIntensity)
-                                                  : (0.70f + 0.16f * smoothIntensity);
-                wetByMode[mode][channel] = saturate (output * modeGain, smoothSaturation * 0.35f);
+                // Bring the spring tail forward without increasing loop feedback,
+                // which previously made the reverb accumulate and turn muddy.
+                const float modeGain = mode == 0 ? (1.12f + 0.25f * smoothIntensity)
+                                      : mode == 1 ? (1.28f + 0.30f * smoothIntensity)
+                                                  : (0.91f + 0.18f * smoothIntensity);
+                const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.13f : 0.23f;
+                wetByMode[mode][channel] = saturate (
+                    output * modeGain + diffused * earlyGain,
+                    smoothSaturation * 0.35f);
             }
         }
 
@@ -306,6 +314,15 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         for (int channel = 0; channel < inputChannels; ++channel)
             for (int mode = 0; mode < numModes; ++mode)
                 wet[channel] += wetByMode[mode][channel] * modeWeights[mode];
+
+        // Gentle wet-only high shelf adds articulation and presence. TONE also
+        // determines how far the upper part of the reverb steps forward.
+        for (int channel = 0; channel < inputChannels; ++channel)
+        {
+            auto& low = wetPresenceLowpassState[static_cast<size_t> (channel)];
+            low += wetPresenceAlpha * (wet[channel] - low);
+            wet[channel] += (wet[channel] - low) * (0.10f + 0.35f * smoothTone);
+        }
 
         // Pitch processing is confined to the wet path.
         const float pitchEnabled = std::abs (smoothPitch) > 0.025f ? 1.0f : 0.0f;
@@ -339,12 +356,16 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             if (pitchPhase >= 1.0f) pitchPhase -= std::floor (pitchPhase);
         }
 
+        // Equal-power blend avoids perceptual dips and lets the wet signal stay audible
+        // at low MIX settings while preserving an exact 100% wet position.
         const float mix = juce::jlimit (0.0f, 1.0f, smoothMix);
+        const float dryGain = std::cos (0.5f * juce::MathConstants<float>::pi * mix);
+        const float wetGain = std::sin (0.5f * juce::MathConstants<float>::pi * mix);
         const float wetL = wet[0] * (1.0f - pitchWetBlend) + shifted[0] * pitchWetBlend;
         const float wetR = inputChannels > 1
             ? wet[1] * (1.0f - pitchWetBlend) + shifted[1] * pitchWetBlend : wetL;
-        buffer.setSample (0, n, dryL * (1.0f - mix) + wetL * mix);
-        if (outputChannels > 1) buffer.setSample (1, n, dryR * (1.0f - mix) + wetR * mix);
+        buffer.setSample (0, n, dryL * dryGain + wetL * wetGain);
+        if (outputChannels > 1) buffer.setSample (1, n, dryR * dryGain + wetR * wetGain);
 
         if (++pitchWritePosition >= pitchBufferSize) pitchWritePosition = 0;
     }
