@@ -1,0 +1,62 @@
+name: FUTURO macOS Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: futuro-macos-build
+  cancel-in-progress: true
+
+jobs:
+  build-arm64:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Confirm Apple Silicon environment
+        run: |
+          sw_vers
+          uname -m
+          test "$(uname -m)" = "arm64"
+          xcode-select -p
+
+      - name: Install CMake
+        run: |
+          brew install cmake
+          cmake --version
+
+      - name: Build VST3, AU, and unsigned test installer
+        run: |
+          chmod +x scripts/build_macos.sh
+          ./scripts/build_macos.sh
+
+      - name: Verify bundles and installer
+        run: |
+          test -d 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3'
+          test -d 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component'
+          test -f 'dist/FUTURO-Spring-Reverb-0.2.0-arm64.pkg'
+
+      - name: Archive bundles and calculate checksums
+        run: |
+          mkdir -p dist/artifacts
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3' 'dist/artifacts/FUTURO-Spring-Reverb-VST3-arm64.zip'
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component' 'dist/artifacts/FUTURO-Spring-Reverb-AU-arm64.zip'
+          cp 'dist/FUTURO-Spring-Reverb-0.2.0-arm64.pkg' dist/artifacts/
+          cd dist/artifacts
+          shasum -a 256 ./* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FUTURO-Spring-Reverb-macOS-arm64
+          path: dist/artifacts/*
+          if-no-files-found: error
+          retention-days: 30

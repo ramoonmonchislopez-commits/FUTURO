@@ -1,0 +1,13 @@
+build/
+build-*/
+build-macos/
+cmake-build-*/
+dist/
+DerivedData/
+.DS_Store
+.AppleDouble
+.LSOverride
+.vscode/
+.idea/
+*.swp
+*~
