@@ -23,13 +23,13 @@ public:
 private:
     FuturoSpringAudioProcessor& processor;
     FuturoKnobLookAndFeel knobLookAndFeel;
-    juce::Slider mix, intensity, saturation, pitch, tone;
+    juce::Slider mix, intensity, saturation, character, tone;
     juce::TextButton classic { "CLASSIC" }, flex { "FLEX" }, dream { "DREAM" };
     juce::Label heading, subheading;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
-    std::unique_ptr<SliderAttachment> mixAtt, intensityAtt, saturationAtt, pitchAtt, toneAtt;
+    std::unique_ptr<SliderAttachment> mixAtt, intensityAtt, saturationAtt, characterAtt, toneAtt;
     std::unique_ptr<ComboAttachment> modeAtt;
     juce::ComboBox modeParam;
     float animPhase = 0.0f;
