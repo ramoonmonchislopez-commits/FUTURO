@@ -51,12 +51,13 @@ private:
 
     static constexpr int numDiffusers = 4;
     static constexpr int numResonators = 4;
+    static constexpr int numModes = 3;
     static constexpr int maxChannels = 2;
     static constexpr float twoPi = 6.2831853071795864769f;
 
-    std::array<DelayLine, maxChannels * numDiffusers> diffusers;
-    std::array<DelayLine, maxChannels * numResonators> resonators;
-    std::array<float, maxChannels * numResonators> resonatorDamping {};
+    std::array<DelayLine, maxChannels * numModes * numDiffusers> diffusers;
+    std::array<DelayLine, maxChannels * numModes * numResonators> resonators;
+    std::array<float, maxChannels * numModes * numResonators> resonatorDamping {};
     std::array<float, maxChannels> dampingState {};
     std::array<float, maxChannels> previousInput {};
 
@@ -77,7 +78,7 @@ private:
     float smoothMode = 0.0f;
     float parameterSmoothing = 0.002f;
 
-    float processDiffuser (int channel, float input, float coefficient) noexcept;
+    float processDiffuser (int channel, int mode, float input, float coefficient) noexcept;
     float readPitchDelay (int channel, float delaySamples) const noexcept;
     float saturate (float input, float amount) const noexcept;
 
