@@ -59,6 +59,7 @@ private:
     std::array<DelayLine, maxChannels * numModes * numResonators> resonators;
     std::array<float, maxChannels * numModes * numResonators> resonatorDamping {};
     std::array<float, maxChannels> dampingState {};
+    std::array<float, maxChannels> wetPresenceLowpassState {};
     std::array<float, maxChannels> previousInput {};
 
     std::array<std::vector<float>, maxChannels> pitchBuffers;
