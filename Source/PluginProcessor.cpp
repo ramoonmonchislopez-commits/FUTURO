@@ -381,8 +381,9 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const float delay = fs * (0.015f + std::sin (phase) * 0.008f * character);
                 const float moving = readCharacterDelay (channel, delay);
                 const float amount = character * (0.48f + 0.24f * character);
-                wet[channel] = wet[channel] * (1.0f - 0.42f * amount) + moving * amount;
-                wet[channel] *= 1.0f + 0.10f * character * std::sin (phase + 0.7f);
+                // A normalized wet blend keeps WOBBLE's motion from raising average level.
+                wet[channel] = wet[channel] * (1.0f - amount) + moving * amount;
+                wet[channel] *= 1.0f + 0.05f * character * std::sin (phase + 0.7f);
             }
         }
         else if (modePosition < 1.5f)
