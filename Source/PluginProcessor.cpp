@@ -327,9 +327,9 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
                 // Bring the spring tail forward without increasing loop feedback,
                 // which previously made the reverb accumulate and turn muddy.
-                const float modeGain = mode == 0 ? (1.42f + 0.34f * smoothIntensity)
-                                      : mode == 1 ? (1.60f + 0.38f * smoothIntensity)
-                                                  : (1.16f + 0.26f * smoothIntensity);
+                const float modeGain = mode == 0 ? (1.60f + 0.40f * smoothIntensity)
+                                      : mode == 1 ? (1.90f + 0.42f * smoothIntensity)
+                                                  : (1.38f + 0.30f * smoothIntensity);
                 const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.21f : 0.23f;
                 const float tail = output * modeGain;
                 wetTailByMode[mode][channel] = mode == 0
