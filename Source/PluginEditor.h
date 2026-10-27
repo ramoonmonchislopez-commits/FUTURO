@@ -24,7 +24,7 @@ private:
     FuturoSpringAudioProcessor& processor;
     FuturoKnobLookAndFeel knobLookAndFeel;
     juce::Slider mix, intensity, saturation, pitch, tone;
-    juce::TextButton classic { "CLASSIC" }, drip { "DRIP" }, dream { "DREAM" };
+    juce::TextButton classic { "CLASSIC" }, flex { "FLEX" }, dream { "DREAM" };
     juce::Label heading, subheading;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
