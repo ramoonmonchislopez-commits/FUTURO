@@ -69,6 +69,7 @@ private:
     float pitchWetBlend = 0.0f;
     float minimumPitchDelaySamples = 0.0f;
     float pitchSweepRangeSamples = 0.0f;
+    float flexModPhase = 0.0f;
 
     double currentSampleRate = 44100.0;
     float smoothMix = 0.25f;
@@ -82,6 +83,7 @@ private:
     float processDiffuser (int channel, int mode, float input, float coefficient) noexcept;
     float readPitchDelay (int channel, float delaySamples) const noexcept;
     float saturate (float input, float amount) const noexcept;
+    float saturateVintage (float input, float amount) const noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FuturoSpringAudioProcessor)
 };
