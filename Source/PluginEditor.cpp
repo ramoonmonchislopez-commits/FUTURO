@@ -25,7 +25,7 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
     const float side = static_cast<float> (juce::jmin (width, height));
     const float radius = side * 0.405f;
     const float centreX = static_cast<float> (x) + static_cast<float> (width) * 0.5f;
-    const float centreY = static_cast<float> (y) + static_cast<float> (height) * 0.5f + 8.0f;
+    const float centreY = static_cast<float> (y) + static_cast<float> (height) * 0.5f;
     const float angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
     const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
     const auto outline = slider.findColour (juce::Slider::rotarySliderOutlineColourId);
