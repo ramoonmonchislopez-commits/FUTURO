@@ -132,12 +132,20 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     wetPresenceLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
     // Short moving buffers support WOBBLE, DOUBLER/FLANGER and MAGIC voices.
-    characterBufferSize = static_cast<size_t> (juce::jmax (512, juce::roundToInt (fs * 0.085f) + 8));
+    characterBufferSize = static_cast<size_t> (juce::jmax (512, juce::roundToInt (fs * 0.120f) + 8));
     for (auto& channel : characterBuffers) channel.assign (characterBufferSize, 0.0f);
     characterWritePosition = 0;
     characterPhase = 0.0f;
     characterLowpassState.fill (0.0f);
     flexModPhase = 0.0f;
+
+    // Three milliseconds of lookahead with linked peak detection and smooth release.
+    outputDelaySamples = static_cast<size_t> (juce::jmax (1, juce::roundToInt (fs * 0.003f)));
+    for (auto& channel : outputDelayBuffers) channel.assign (outputDelaySamples, 0.0f);
+    outputDelayWritePosition = 0;
+    outputPeakEnvelope = 0.0f;
+    outputPeakRelease = std::exp (-1.0f / (0.100f * fs));
+    setLatencySamples (static_cast<int> (outputDelaySamples));
 
     smoothMix = parameters.getRawParameterValue ("mix")->load();
     smoothIntensity = parameters.getRawParameterValue ("intensity")->load();
@@ -154,6 +162,8 @@ void FuturoSpringAudioProcessor::releaseResources()
     for (auto& line : resonators) line.clear();
     for (auto& channel : characterBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
     characterLowpassState.fill (0.0f);
+    for (auto& channel : outputDelayBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
+    outputPeakEnvelope = 0.0f;
     resonatorDamping.fill (0.0f);
     dampingState.fill (0.0f);
     wetPresenceLowpassState.fill (0.0f);
@@ -218,7 +228,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const int outputChannels = juce::jmin (maxChannels, getTotalNumOutputChannels());
     const int inputChannels = juce::jmin (maxChannels, getTotalNumInputChannels());
     const int numSamples = buffer.getNumSamples();
-    if (inputChannels < 1 || outputChannels < 1 || characterBufferSize < 4) return;
+    if (inputChannels < 1 || outputChannels < 1 || characterBufferSize < 4 || outputDelaySamples < 1) return;
     for (int channel = inputChannels; channel < outputChannels; ++channel)
         buffer.clear (channel, 0, numSamples);
 
@@ -327,9 +337,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
                 // Bring the spring tail forward without increasing loop feedback,
                 // which previously made the reverb accumulate and turn muddy.
-                const float modeGain = mode == 0 ? (1.60f + 0.40f * smoothIntensity)
-                                      : mode == 1 ? (1.90f + 0.42f * smoothIntensity)
-                                                  : (1.38f + 0.30f * smoothIntensity);
+                // Presence comes from excitation and tone, not brute-force output gain.
+                const float modeGain = mode == 0 ? (1.32f + 0.28f * smoothIntensity)
+                                      : mode == 1 ? (1.48f + 0.30f * smoothIntensity)
+                                                  : (1.08f + 0.20f * smoothIntensity);
                 const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.21f : 0.23f;
                 const float tail = output * modeGain;
                 wetTailByMode[mode][channel] = mode == 0
@@ -351,64 +362,65 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 wetEarly[channel] += wetEarlyByMode[mode][channel] * modeWeights[mode];
             }
 
-        // Recombine the spring attack and resonant tail before applying CHARACTER.
+        // Keep a clean copy for modes whose character is modulation-only.
+        // FLEX intentionally stores processed output to create a controlled elastic tail.
         float wet[2] { wetEarly[0] + wetTail[0], wetEarly[1] + wetTail[1] };
-        for (int channel = 0; channel < inputChannels; ++channel)
-            characterBuffers[static_cast<size_t> (channel)][characterWritePosition] = wet[channel];
+        const float characterInputWet[2] { wet[0], wet[1] };
 
         const float character = juce::jlimit (0.0f, 1.0f, smoothCharacter);
-        const float characterRate = modePosition < 0.5f ? (0.24f + 0.48f * character)
-                                   : modePosition < 1.5f ? (0.13f + 0.34f * character)
-                                                         : (0.07f + 0.20f * character);
+        const float characterRate = modePosition < 0.5f ? (0.20f + 0.42f * character)
+                                   : modePosition < 1.5f ? (0.16f + 0.27f * character)
+                                                         : (0.055f + 0.13f * character);
 
         if (modePosition < 0.5f)
         {
-            // CLASSIC / WOBBLE: slow, lightly modulated delay creates tape-like motion.
+            // CLASSIC / WOBBLE: slow, tape-like modulation in the wet field.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
-                const float phase = characterPhase + static_cast<float> (channel) * 0.82f;
-                const float delay = fs * (0.009f + std::sin (phase) * 0.0035f * character);
+                const float phase = characterPhase + static_cast<float> (channel) * 0.90f;
+                const float delay = fs * (0.015f + std::sin (phase) * 0.008f * character);
                 const float moving = readCharacterDelay (channel, delay);
-                const float amount = 0.42f * character;
-                wet[channel] = wet[channel] * (1.0f - 0.20f * amount) + moving * amount;
-                wet[channel] *= 1.0f + 0.07f * character * std::sin (phase + 0.7f);
+                const float amount = character * (0.48f + 0.24f * character);
+                wet[channel] = wet[channel] * (1.0f - 0.42f * amount) + moving * amount;
+                wet[channel] *= 1.0f + 0.10f * character * std::sin (phase + 0.7f);
             }
         }
         else if (modePosition < 1.5f)
         {
-            // FLEX / DOUBLER-FLANGER: two moving short voices create an animated doubled spring.
+            // FLEX / BLOOM: an elastic spring rebound instead of a doubler/flanger.
+            // A modulated 25-65ms feedback path blooms into quieter rebounds.
+            // Its loop coefficient stays below 0.92, allowing the repeats to decay.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
-                const float phase = characterPhase + static_cast<float> (channel) * 1.05f;
-                const float wobble = std::sin (phase);
-                const float delayA = fs * (0.011f + 0.0035f * character * wobble);
-                const float delayB = fs * (0.019f - 0.0045f * character * wobble);
-                const float voiceA = readCharacterDelay (channel, delayA);
-                const float voiceB = readCharacterDelay (channel, delayB);
-                const float doubled = 0.5f * (voiceA + voiceB);
-                wet[channel] = wet[channel] * (1.0f - 0.14f * character)
-                             + doubled * (0.58f * character);
+                const float phase = characterPhase + static_cast<float> (channel) * 0.72f;
+                const float delay = fs * (0.045f + 0.020f * character * std::sin (phase));
+                const float own = readCharacterDelay (channel, delay);
+                const float other = inputChannels > 1
+                    ? readCharacterDelay (1 - channel, delay * 0.96f) : own;
+                const float rebound = own * 0.84f + other * 0.16f;
+                const float feedback = character * (0.58f + 0.34f * character);
+                wet[channel] = wet[channel] * (1.0f - 0.20f * character)
+                             + rebound * feedback;
             }
         }
         else
         {
-            // DREAM / MAGIC: longer modulated, cross-fed and darkened echoes create
-            // a nostalgic tape-memory halo around the spring.
+            // DREAM / MAGIC: nostalgic tape memory with a slow, dark, cross-fed halo.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
                 const float phase = characterPhase + static_cast<float> (channel) * 1.13f;
-                const float delay = fs * (0.038f + 0.012f * character * std::sin (phase)
-                                          + static_cast<float> (channel) * 0.006f);
+                const float delay = fs * (0.060f + 0.024f * character * std::sin (phase)
+                                          + static_cast<float> (channel) * 0.008f);
                 const float own = readCharacterDelay (channel, delay);
                 const float other = inputChannels > 1
                     ? readCharacterDelay (1 - channel, delay * 0.91f) : own;
-                const float memory = own * 0.78f + other * 0.22f;
-                const float cutoff = 3600.0f - 1700.0f * character;
+                const float memory = own * 0.72f + other * 0.28f;
+                const float cutoff = 3400.0f - 1900.0f * character;
                 const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
                 characterLowpassState[static_cast<size_t> (channel)] += alpha
                     * (memory - characterLowpassState[static_cast<size_t> (channel)]);
-                wet[channel] = wet[channel] * (1.0f - 0.16f * character)
-                             + characterLowpassState[static_cast<size_t> (channel)] * (0.52f * character);
+                wet[channel] = wet[channel] * (1.0f - 0.22f * character)
+                             + characterLowpassState[static_cast<size_t> (channel)] * (0.72f * character);
             }
         }
 
@@ -432,21 +444,39 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             auto& low = wetPresenceLowpassState[static_cast<size_t> (channel)];
             low += wetPresenceAlpha * (wet[channel] - low);
-            const float highBandGain = 0.20f + 1.60f * std::pow (smoothTone, 1.15f);
+            // Musical dark-to-bright shelf with limited high-band boost for headroom.
+            const float highBandGain = 0.28f + 1.18f * std::pow (smoothTone, 1.10f);
             wet[channel] = low + (wet[channel] - low) * highBandGain;
         }
 
+        // FLEX feeds its processed output back into the character buffer; other modes
+        // store the clean spring field to keep their movement effects from self-building.
+        for (int channel = 0; channel < inputChannels; ++channel)
+            characterBuffers[static_cast<size_t> (channel)][characterWritePosition]
+                = (modePosition >= 0.5f && modePosition < 1.5f) ? wet[channel] : characterInputWet[channel];
+
         const float wetL = wet[0];
         const float wetR = inputChannels > 1 ? wet[1] : wetL;
-
-        // Equal-power blend avoids perceptual dips and lets the wet signal stay audible
-        // at low MIX settings while preserving an exact 100% wet position.
         const float mix = juce::jlimit (0.0f, 1.0f, smoothMix);
         const float dryGain = std::cos (0.5f * juce::MathConstants<float>::pi * mix);
         const float wetGain = std::sin (0.5f * juce::MathConstants<float>::pi * mix);
-        buffer.setSample (0, n, dryL * dryGain + wetL * wetGain);
-        if (outputChannels > 1) buffer.setSample (1, n, dryR * dryGain + wetR * wetGain);
+        const float rawOutL = dryL * dryGain + wetL * wetGain;
+        const float rawOutR = dryR * dryGain + wetR * wetGain;
 
+        // Linked, lookahead peak control prevents clipping without adding saturation.
+        const float peakNow = juce::jmax (std::abs (rawOutL), std::abs (rawOutR));
+        outputPeakEnvelope = juce::jmax (peakNow, outputPeakEnvelope * outputPeakRelease);
+        constexpr float outputCeiling = 0.96f;
+        const float limiterGain = outputPeakEnvelope > outputCeiling
+                                ? outputCeiling / outputPeakEnvelope : 1.0f;
+        const float delayedL = outputDelayBuffers[0][outputDelayWritePosition];
+        const float delayedR = outputDelayBuffers[1][outputDelayWritePosition];
+        outputDelayBuffers[0][outputDelayWritePosition] = rawOutL;
+        outputDelayBuffers[1][outputDelayWritePosition] = rawOutR;
+        buffer.setSample (0, n, delayedL * limiterGain);
+        if (outputChannels > 1) buffer.setSample (1, n, delayedR * limiterGain);
+
+        if (++outputDelayWritePosition >= outputDelaySamples) outputDelayWritePosition = 0;
         if (++characterWritePosition >= characterBufferSize) characterWritePosition = 0;
     }
 }
