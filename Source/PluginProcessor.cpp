@@ -82,12 +82,12 @@ FuturoSpringAudioProcessor::APVTS::ParameterLayout FuturoSpringAudioProcessor::c
     APVTS::ParameterLayout p;
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "mix", 1 }, "Mix",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.25f));
-    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "intensity", 1 }, "Decay",
+    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "intensity", 1 }, "Intensity",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.55f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "saturation", 1 }, "Vintage Drive",
         juce::NormalisableRange<float> (0.0f, 18.0f, 0.1f), 2.0f));
-    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "pitch", 1 }, "Pitch (semitones)",
-        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.1f), 0.0f));
+    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "character", 1 }, "Character",
+        juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 35.0f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "tone", 1 }, "Tone / Damping",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.7f));
     p.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "mode", 1 }, "Mode",
@@ -131,21 +131,18 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     dampingState.fill (0.0f);
     wetPresenceLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
-    // Keep the pitch-shifter grain short. Only the late resonant tail is shifted;
-    // early spring attacks remain in the original time position to preserve groove.
-    minimumPitchDelaySamples = fs * 0.005f;
-    pitchSweepRangeSamples = fs * 0.035f;
-    pitchBufferSize = static_cast<size_t> (juce::jmax (512, juce::roundToInt (fs * 0.050f) + 8));
-    for (auto& channel : pitchBuffers) channel.assign (pitchBufferSize, 0.0f);
-    pitchWritePosition = 0;
-    pitchPhase = 0.0f;
-    pitchWetBlend = 0.0f;
+    // Short moving buffers support WOBBLE, DOUBLER/FLANGER and MAGIC voices.
+    characterBufferSize = static_cast<size_t> (juce::jmax (512, juce::roundToInt (fs * 0.085f) + 8));
+    for (auto& channel : characterBuffers) channel.assign (characterBufferSize, 0.0f);
+    characterWritePosition = 0;
+    characterPhase = 0.0f;
+    characterLowpassState.fill (0.0f);
     flexModPhase = 0.0f;
 
     smoothMix = parameters.getRawParameterValue ("mix")->load();
     smoothIntensity = parameters.getRawParameterValue ("intensity")->load();
     smoothSaturation = parameters.getRawParameterValue ("saturation")->load();
-    smoothPitch = parameters.getRawParameterValue ("pitch")->load();
+    smoothCharacter = parameters.getRawParameterValue ("character")->load() * 0.01f;
     smoothTone = parameters.getRawParameterValue ("tone")->load();
     smoothMode = parameters.getRawParameterValue ("mode")->load();
     parameterSmoothing = 1.0f - std::exp (-1.0f / (0.020f * fs));
@@ -155,7 +152,8 @@ void FuturoSpringAudioProcessor::releaseResources()
 {
     for (auto& line : diffusers) line.clear();
     for (auto& line : resonators) line.clear();
-    for (auto& channel : pitchBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
+    for (auto& channel : characterBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
+    characterLowpassState.fill (0.0f);
     resonatorDamping.fill (0.0f);
     dampingState.fill (0.0f);
     wetPresenceLowpassState.fill (0.0f);
@@ -176,16 +174,16 @@ float FuturoSpringAudioProcessor::processDiffuser (int channel, int mode, float 
     return x;
 }
 
-float FuturoSpringAudioProcessor::readPitchDelay (int channel, float delaySamples) const noexcept
+float FuturoSpringAudioProcessor::readCharacterDelay (int channel, float delaySamples) const noexcept
 {
-    if (pitchBufferSize < 4) return 0.0f;
+    if (characterBufferSize < 4) return 0.0f;
     delaySamples = juce::jlimit (1.0f, static_cast<float> (pitchBufferSize - 2), delaySamples);
-    const float readPosition = static_cast<float> (pitchWritePosition) - delaySamples;
+    const float readPosition = static_cast<float> (characterWritePosition) - delaySamples;
     const float flooredPosition = std::floor (readPosition);
     const int index0 = wrapIndex (static_cast<int> (flooredPosition), static_cast<int> (pitchBufferSize));
     const int index1 = (index0 + 1) % static_cast<int> (pitchBufferSize);
     const float fraction = readPosition - flooredPosition;
-    const auto& data = pitchBuffers[static_cast<size_t> (channel)];
+    const auto& data = characterBuffers[static_cast<size_t> (channel)];
     return data[static_cast<size_t> (index0)]
          + fraction * (data[static_cast<size_t> (index1)] - data[static_cast<size_t> (index0)]);
 }
@@ -227,19 +225,19 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float targetMix = parameters.getRawParameterValue ("mix")->load();
     const float targetIntensity = parameters.getRawParameterValue ("intensity")->load();
     const float targetSaturation = parameters.getRawParameterValue ("saturation")->load();
-    const float targetPitch = parameters.getRawParameterValue ("pitch")->load();
+    const float targetCharacter = parameters.getRawParameterValue ("character")->load() * 0.01f;
     const float targetTone = parameters.getRawParameterValue ("tone")->load();
     const float targetMode = parameters.getRawParameterValue ("mode")->load();
     const float fs = static_cast<float> (currentSampleRate);
     const float inputLPAlpha = 1.0f - std::exp (-twoPi * 2300.0f / fs);
-    const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1900.0f / fs);
+    const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1300.0f / fs);
 
     for (int n = 0; n < numSamples; ++n)
     {
         smoothMix += parameterSmoothing * (targetMix - smoothMix);
         smoothIntensity += parameterSmoothing * (targetIntensity - smoothIntensity);
         smoothSaturation += parameterSmoothing * (targetSaturation - smoothSaturation);
-        smoothPitch += parameterSmoothing * (targetPitch - smoothPitch);
+        smoothCharacter += parameterSmoothing * (targetCharacter - smoothCharacter);
         smoothTone += parameterSmoothing * (targetTone - smoothTone);
         smoothMode += parameterSmoothing * (targetMode - smoothMode);
 
@@ -293,8 +291,8 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                          : mode == 1 ? juce::jlimit (0.78f, 0.95f, 0.86f + flexMotion)
                                                      : 0.16f;
                 const float crossFeedback = mode == 0 ? 0.035f : mode == 1 ? 0.095f : 0.045f;
-                const float toneBase = mode == 0 ? 1350.0f : mode == 1 ? 3600.0f : 520.0f;
-                const float toneSpan = mode == 0 ? 10500.0f : mode == 1 ? 13000.0f : 3900.0f;
+                const float toneBase = mode == 0 ? 600.0f : mode == 1 ? 800.0f : 360.0f;
+                const float toneSpan = mode == 0 ? 10800.0f : mode == 1 ? 14000.0f : 4200.0f;
                 const float cutoff = juce::jlimit (350.0f, fs * 0.44f, toneBase + toneSpan * smoothTone);
                 const float toneAlpha = 1.0f - std::exp (-twoPi * cutoff / fs);
 
@@ -329,9 +327,9 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
                 // Bring the spring tail forward without increasing loop feedback,
                 // which previously made the reverb accumulate and turn muddy.
-                const float modeGain = mode == 0 ? (1.12f + 0.25f * smoothIntensity)
-                                      : mode == 1 ? (1.28f + 0.30f * smoothIntensity)
-                                                  : (0.91f + 0.18f * smoothIntensity);
+                const float modeGain = mode == 0 ? (1.42f + 0.34f * smoothIntensity)
+                                      : mode == 1 ? (1.60f + 0.38f * smoothIntensity)
+                                                  : (1.16f + 0.26f * smoothIntensity);
                 const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.21f : 0.23f;
                 const float tail = output * modeGain;
                 wetTailByMode[mode][channel] = mode == 0
@@ -353,47 +351,70 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 wetEarly[channel] += wetEarlyByMode[mode][channel] * modeWeights[mode];
             }
 
-        // The unshifted early reflection/spring attack is a timing anchor. Only the
-        // late resonant tail enters this short-window pitch shifter, so pitch changes
-        // cannot move the beginning of the spring response or the dry groove.
-        const float pitchAmount = juce::jlimit (0.0f, 1.0f, std::abs (smoothPitch) / 12.0f);
-        const float pitchBlendTarget = pitchAmount < 0.002f ? 0.0f : (0.22f + 0.62f * pitchAmount);
-        pitchWetBlend += parameterSmoothing * (pitchBlendTarget - pitchWetBlend);
-        const float ratio = std::pow (2.0f, smoothPitch / 12.0f);
-        const float phaseStep = std::abs (1.0f - ratio) / juce::jmax (1.0f, pitchSweepRangeSamples);
+        // Recombine the spring attack and resonant tail before applying CHARACTER.
+        float wet[2] { wetEarly[0] + wetTail[0], wetEarly[1] + wetTail[1] };
         for (int channel = 0; channel < inputChannels; ++channel)
-            pitchBuffers[static_cast<size_t> (channel)][pitchWritePosition] = wetTail[channel];
+            characterBuffers[static_cast<size_t> (channel)][characterWritePosition] = wet[channel];
 
-        float shiftedTail[2] { wetTail[0], wetTail[1] };
-        if (pitchWetBlend > 0.0001f && std::abs (smoothPitch) > 0.025f)
+        const float character = juce::jlimit (0.0f, 1.0f, smoothCharacter);
+        const float characterRate = modePosition < 0.5f ? (0.24f + 0.48f * character)
+                                   : modePosition < 1.5f ? (0.13f + 0.34f * character)
+                                                         : (0.07f + 0.20f * character);
+
+        if (modePosition < 0.5f)
         {
-            const bool pitchUp = ratio > 1.0f;
-            const float phaseA = pitchPhase;
-            float phaseB = pitchPhase + 0.5f;
-            if (phaseB >= 1.0f) phaseB -= 1.0f;
-            const auto delayForPhase = [this, pitchUp] (float phase)
-            {
-                const float ramp = pitchUp ? (1.0f - phase) : phase;
-                return minimumPitchDelaySamples + ramp * pitchSweepRangeSamples;
-            };
-            const float weightA = 0.5f - 0.5f * std::cos (twoPi * phaseA);
-            const float weightB = 1.0f - weightA;
+            // CLASSIC / WOBBLE: slow, lightly modulated delay creates tape-like motion.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
-                const float a = readPitchDelay (channel, delayForPhase (phaseA));
-                const float b = readPitchDelay (channel, delayForPhase (phaseB));
-                shiftedTail[channel] = a * weightA + b * weightB;
+                const float phase = characterPhase + static_cast<float> (channel) * 0.82f;
+                const float delay = fs * (0.009f + std::sin (phase) * 0.0035f * character);
+                const float moving = readCharacterDelay (channel, delay);
+                const float amount = 0.42f * character;
+                wet[channel] = wet[channel] * (1.0f - 0.20f * amount) + moving * amount;
+                wet[channel] *= 1.0f + 0.07f * character * std::sin (phase + 0.7f);
             }
-            pitchPhase += phaseStep;
-            if (pitchPhase >= 1.0f) pitchPhase -= std::floor (pitchPhase);
+        }
+        else if (modePosition < 1.5f)
+        {
+            // FLEX / DOUBLER-FLANGER: two moving short voices create an animated doubled spring.
+            for (int channel = 0; channel < inputChannels; ++channel)
+            {
+                const float phase = characterPhase + static_cast<float> (channel) * 1.05f;
+                const float wobble = std::sin (phase);
+                const float delayA = fs * (0.011f + 0.0035f * character * wobble);
+                const float delayB = fs * (0.019f - 0.0045f * character * wobble);
+                const float voiceA = readCharacterDelay (channel, delayA);
+                const float voiceB = readCharacterDelay (channel, delayB);
+                const float doubled = 0.5f * (voiceA + voiceB);
+                wet[channel] = wet[channel] * (1.0f - 0.14f * character)
+                             + doubled * (0.58f * character);
+            }
+        }
+        else
+        {
+            // DREAM / MAGIC: longer modulated, cross-fed and darkened echoes create
+            // a nostalgic tape-memory halo around the spring.
+            for (int channel = 0; channel < inputChannels; ++channel)
+            {
+                const float phase = characterPhase + static_cast<float> (channel) * 1.13f;
+                const float delay = fs * (0.038f + 0.012f * character * std::sin (phase)
+                                          + static_cast<float> (channel) * 0.006f);
+                const float own = readCharacterDelay (channel, delay);
+                const float other = inputChannels > 1
+                    ? readCharacterDelay (1 - channel, delay * 0.91f) : own;
+                const float memory = own * 0.78f + other * 0.22f;
+                const float cutoff = 3600.0f - 1700.0f * character;
+                const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
+                characterLowpassState[static_cast<size_t> (channel)] += alpha
+                    * (memory - characterLowpassState[static_cast<size_t> (channel)]);
+                wet[channel] = wet[channel] * (1.0f - 0.16f * character)
+                             + characterLowpassState[static_cast<size_t> (channel)] * (0.52f * character);
+            }
         }
 
-        // Recombine the pitch-independent attacks with the pitch-shifted late field.
-        float wet[2]
-        {
-            wetEarly[0] + wetTail[0] * (1.0f - pitchWetBlend) + shiftedTail[0] * pitchWetBlend,
-            wetEarly[1] + wetTail[1] * (1.0f - pitchWetBlend) + shiftedTail[1] * pitchWetBlend
-        };
+        characterPhase += twoPi * characterRate / fs;
+        if (characterPhase >= twoPi)
+            characterPhase -= twoPi;
 
         // DREAM widens only the recombined wet field while keeping the centre stable.
         if (inputChannels > 1 && modePosition > 1.0f)
@@ -411,7 +432,8 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             auto& low = wetPresenceLowpassState[static_cast<size_t> (channel)];
             low += wetPresenceAlpha * (wet[channel] - low);
-            wet[channel] += (wet[channel] - low) * (0.10f + 0.35f * smoothTone);
+            const float highBandGain = 0.20f + 1.60f * std::pow (smoothTone, 1.15f);
+            wet[channel] = low + (wet[channel] - low) * highBandGain;
         }
 
         const float wetL = wet[0];
