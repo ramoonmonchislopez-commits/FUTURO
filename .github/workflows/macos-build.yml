@@ -37,6 +37,11 @@ jobs:
           chmod +x scripts/build_macos.sh
           ./scripts/build_macos.sh
 
+      - name: Run DSP regression tests
+        run: |
+          cmake --build build-macos --config Release --target FUTURO_DSP_SMOKE_TEST
+          ./build-macos/FUTURO_DSP_SMOKE_TEST
+
       - name: Validate plug-ins with pluginval
         shell: bash
         run: |
