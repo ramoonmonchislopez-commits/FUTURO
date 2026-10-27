@@ -94,8 +94,9 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
 
     styleKnob (mix, "MIX");
     styleKnob (saturation, "VINTAGE DRIVE");
-    styleKnob (intensity, "DECAY");
-    styleKnob (pitch, "PITCH (ST)");
+    styleKnob (intensity, "INTENSITY");
+    styleKnob (character, "WOBBLE");
+    character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
 
     for (auto* button : { &classic, &flex, &dream })
@@ -123,7 +124,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     mixAtt        = std::make_unique<SliderAttachment> (p.parameters, "mix", mix);
     intensityAtt  = std::make_unique<SliderAttachment> (p.parameters, "intensity", intensity);
     saturationAtt = std::make_unique<SliderAttachment> (p.parameters, "saturation", saturation);
-    pitchAtt      = std::make_unique<SliderAttachment> (p.parameters, "pitch", pitch);
+    characterAtt      = std::make_unique<SliderAttachment> (p.parameters, "character", character);
     toneAtt       = std::make_unique<SliderAttachment> (p.parameters, "tone", tone);
 
     setMode (static_cast<int> (p.parameters.getRawParameterValue ("mode")->load()));
@@ -134,7 +135,7 @@ FuturoSpringAudioProcessorEditor::~FuturoSpringAudioProcessorEditor()
 {
     stopTimer();
     setLookAndFeel (nullptr);
-    for (auto* slider : { &mix, &intensity, &saturation, &pitch, &tone })
+    for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
         slider->setLookAndFeel (nullptr);
 }
 
@@ -166,8 +167,17 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
+    const juce::String characterName = visualMode == 0 ? "WOBBLE"
+                                    : visualMode == 1 ? "DOUBLER / FLANGER" : "MAGIC";
+    character.setName (characterName);
+    character.setTooltip (visualMode == 0
+        ? "WOBBLE: slow, tape-like movement"
+        : visualMode == 1
+            ? "DOUBLER / FLANGER: modern, animated doubled spring"
+            : "MAGIC: nostalgic, softened stereo echo");
+
     const auto accent = currentModeColour();
-    for (auto* slider : { &mix, &intensity, &saturation, &pitch, &tone })
+    for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
         slider->setColour (juce::Slider::rotarySliderFillColourId, accent);
     for (auto* button : { &classic, &flex, &dream })
         button->setColour (juce::TextButton::buttonOnColourId, accent);
@@ -353,7 +363,7 @@ void FuturoSpringAudioProcessorEditor::resized()
                           knobTop + 9, standardWidth, standardHeight);
     intensity.setBounds (juce::roundToInt (width * fractions[2]) - largeWidth / 2,
                          knobTop - 1, largeWidth, largeHeight);
-    pitch.setBounds (juce::roundToInt (width * fractions[3]) - standardWidth / 2,
+    character.setBounds (juce::roundToInt (width * fractions[3]) - standardWidth / 2,
                      knobTop + 9, standardWidth, standardHeight);
     tone.setBounds (juce::roundToInt (width * fractions[4]) - standardWidth / 2,
                     knobTop + 9, standardWidth, standardHeight);
