@@ -144,7 +144,7 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     for (auto& channel : outputDelayBuffers) channel.assign (outputDelaySamples, 0.0f);
     outputDelayWritePosition = 0;
     outputPeakEnvelope = 0.0f;
-    outputPeakRelease = std::exp (-1.0f / (0.100f * fs));
+    outputPeakRelease = std::exp (-1.0f / (0.250f * fs));
     setLatencySamples (static_cast<int> (outputDelaySamples));
 
     smoothMix = parameters.getRawParameterValue ("mix")->load();
