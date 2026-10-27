@@ -26,14 +26,14 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode, float pitch = 0.0f)
+    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f)
     {
         FuturoSpringAudioProcessor processor;
         setParameter (processor, "mix", 1.0f);
-        setParameter (processor, "intensity", 1.0f);
+        setParameter (processor, "intensity", intensity);
         setParameter (processor, "saturation", 0.0f);
-        setParameter (processor, "pitch", pitch);
-        setParameter (processor, "tone", 0.65f);
+        setParameter (processor, "character", character);
+        setParameter (processor, "tone", tone);
         setParameter (processor, "mode", static_cast<float> (mode));
         processor.prepareToPlay (testRate, blockSize);
 
@@ -122,26 +122,50 @@ int main()
                       << " relative difference=" << relativeDifference << "\n";
         }
 
-    const auto pitchedFlex = renderImpulse (1, 12.0f);
-    double earlyError = 0.0, earlyEnergy = 0.0, tailError = 0.0, tailEnergy = 0.0;
-    for (size_t i = 0; i < renders[1].samples.size(); ++i)
+    // Each mode's CHARACTER knob must audibly alter its wet response.
+    for (int mode = 0; mode < 3; ++mode)
     {
-        const double a = renders[1].samples[i], b = pitchedFlex.samples[i];
-        const double d = a - b;
-        if (i < static_cast<size_t> (testRate * 0.010)) { earlyError += d * d; earlyEnergy += a * a + b * b; }
-        if (i >= static_cast<size_t> (testRate * 0.150)) { tailError += d * d; tailEnergy += a * a + b * b; }
+        const auto characterMax = renderImpulse (mode, 100.0f);
+        double diffEnergy = 0.0, refEnergy = 0.0;
+        for (size_t i = 0; i < renders[static_cast<size_t> (mode)].samples.size(); ++i)
+        {
+            const double a = renders[static_cast<size_t> (mode)].samples[i];
+            const double b = characterMax.samples[i];
+            const double d = a - b;
+            diffEnergy += d * d;
+            refEnergy += a * a + b * b;
+        }
+        const double characterDifference = std::sqrt (diffEnergy / juce::jmax (1.0e-20, refEnergy));
+        if (characterDifference < 0.025)
+        {
+            std::cerr << "FAIL: CHARACTER had too little effect in mode " << mode
+                      << "; relative difference=" << characterDifference << "\n";
+            return 5;
+        }
+        std::cout << "PASS: mode " << mode << " CHARACTER difference=" << characterDifference << "\n";
     }
-    if (std::sqrt (earlyError / juce::jmax (1.0e-20, earlyEnergy)) > 1.0e-5)
+
+    // TONE extremes must have a meaningful, measurable impact in each mode.
+    for (int mode = 0; mode < 3; ++mode)
     {
-        std::cerr << "FAIL: pitch changed the first 20ms of the FLEX response\n";
-        return 5;
+        const auto dark = renderImpulse (mode, 0.0f, 0.0f);
+        const auto bright = renderImpulse (mode, 0.0f, 1.0f);
+        double diffEnergy = 0.0, refEnergy = 0.0;
+        for (size_t i = 0; i < dark.samples.size(); ++i)
+        {
+            const double a = dark.samples[i], b = bright.samples[i], d = a - b;
+            diffEnergy += d * d;
+            refEnergy += a * a + b * b;
+        }
+        const double toneDifference = std::sqrt (diffEnergy / juce::jmax (1.0e-20, refEnergy));
+        if (toneDifference < 0.04)
+        {
+            std::cerr << "FAIL: TONE had too little effect in mode " << mode
+                      << "; relative difference=" << toneDifference << "\n";
+            return 6;
+        }
+        std::cout << "PASS: mode " << mode << " TONE difference=" << toneDifference << "\n";
     }
-    if (std::sqrt (tailError / juce::jmax (1.0e-20, tailEnergy)) < 0.01)
-    {
-        std::cerr << "FAIL: pitch did not substantially change the late FLEX tail\n";
-        return 6;
-    }
-    std::cout << "PASS: FLEX pitch leaves the first 20ms stable and changes the late tail\n";
 
     std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes.\n";
     return 0;
