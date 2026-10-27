@@ -266,8 +266,12 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     if (intensityValue < 0.15f)
         g.drawLine (cx - 7.0f, cy + 11.0f + bob, cx + 7.0f, cy + 11.0f + bob, 2.0f);
     else
-        g.drawArc (cx - mouthWidth * 0.5f, cy + 3.0f + bob, mouthWidth, mouthHeight,
-                   0.20f, juce::MathConstants<float>::pi - 0.20f, true, 2.3f + intensityValue);
+    {
+        juce::Path smile;
+        smile.addArc (cx - mouthWidth * 0.5f, cy + 3.0f + bob, mouthWidth, mouthHeight,
+                      0.20f, juce::MathConstants<float>::pi - 0.20f, true);
+        g.strokePath (smile, juce::PathStrokeType (2.3f + intensityValue));
+    }
 
     if (visualMode == 0)
     {
