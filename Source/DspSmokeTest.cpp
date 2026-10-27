@@ -26,10 +26,10 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f)
+    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f, float mix = 1.0f)
     {
         FuturoSpringAudioProcessor processor;
-        setParameter (processor, "mix", 1.0f);
+        setParameter (processor, "mix", mix);
         setParameter (processor, "intensity", intensity);
         setParameter (processor, "saturation", 0.0f);
         setParameter (processor, "character", character);
@@ -170,7 +170,7 @@ int main()
     // A hot input must remain below digital full scale without using saturation.
     for (int mode = 0; mode < 3; ++mode)
     {
-        const auto hot = renderImpulse (mode, 0.0f, 0.65f, 1.0f, 12.0f);
+        const auto hot = renderImpulse (mode, 0.0f, 0.65f, 1.0f, 12.0f, 0.0f);
         if (! hot.finite || hot.peak > 0.985f)
         {
             std::cerr << "FAIL: output headroom limiter did not contain peaks in mode " << mode
