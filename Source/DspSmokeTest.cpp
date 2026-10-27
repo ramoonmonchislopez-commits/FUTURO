@@ -122,6 +122,27 @@ int main()
                       << " relative difference=" << relativeDifference << "\n";
         }
 
+    const auto pitchedFlex = renderImpulse (1, 12.0f);
+    double earlyError = 0.0, earlyEnergy = 0.0, tailError = 0.0, tailEnergy = 0.0;
+    for (size_t i = 0; i < renders[1].samples.size(); ++i)
+    {
+        const double a = renders[1].samples[i], b = pitchedFlex.samples[i];
+        const double d = a - b;
+        if (i < static_cast<size_t> (testRate * 0.020)) { earlyError += d * d; earlyEnergy += a * a + b * b; }
+        if (i >= static_cast<size_t> (testRate * 0.150)) { tailError += d * d; tailEnergy += a * a + b * b; }
+    }
+    if (std::sqrt (earlyError / juce::jmax (1.0e-20, earlyEnergy)) > 1.0e-5)
+    {
+        std::cerr << "FAIL: pitch changed the first 20ms of the FLEX response\n";
+        return 5;
+    }
+    if (std::sqrt (tailError / juce::jmax (1.0e-20, tailEnergy)) < 0.01)
+    {
+        std::cerr << "FAIL: pitch did not substantially change the late FLEX tail\n";
+        return 6;
+    }
+    std::cout << "PASS: FLEX pitch leaves the first 20ms stable and changes the late tail\n";
+
     std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes.\n";
     return 0;
 }
