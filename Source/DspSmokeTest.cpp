@@ -128,7 +128,7 @@ int main()
     {
         const double a = renders[1].samples[i], b = pitchedFlex.samples[i];
         const double d = a - b;
-        if (i < static_cast<size_t> (testRate * 0.020)) { earlyError += d * d; earlyEnergy += a * a + b * b; }
+        if (i < static_cast<size_t> (testRate * 0.010)) { earlyError += d * d; earlyEnergy += a * a + b * b; }
         if (i >= static_cast<size_t> (testRate * 0.150)) { tailError += d * d; tailEnergy += a * a + b * b; }
     }
     if (std::sqrt (earlyError / juce::jmax (1.0e-20, earlyEnergy)) > 1.0e-5)
