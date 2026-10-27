@@ -62,26 +62,24 @@ private:
     std::array<float, maxChannels> wetPresenceLowpassState {};
     std::array<float, maxChannels> previousInput {};
 
-    std::array<std::vector<float>, maxChannels> pitchBuffers;
-    size_t pitchWritePosition = 0;
-    size_t pitchBufferSize = 0;
-    float pitchPhase = 0.0f;
-    float pitchWetBlend = 0.0f;
-    float minimumPitchDelaySamples = 0.0f;
-    float pitchSweepRangeSamples = 0.0f;
+    std::array<std::vector<float>, maxChannels> characterBuffers;
+    size_t characterWritePosition = 0;
+    size_t characterBufferSize = 0;
+    float characterPhase = 0.0f;
     float flexModPhase = 0.0f;
+    std::array<float, maxChannels> characterLowpassState {};
 
     double currentSampleRate = 44100.0;
     float smoothMix = 0.25f;
     float smoothIntensity = 0.5f;
     float smoothSaturation = 2.0f;
-    float smoothPitch = 0.0f;
+    float smoothCharacter = 0.35f;
     float smoothTone = 0.7f;
     float smoothMode = 0.0f;
     float parameterSmoothing = 0.002f;
 
     float processDiffuser (int channel, int mode, float input, float coefficient) noexcept;
-    float readPitchDelay (int channel, float delaySamples) const noexcept;
+    float readCharacterDelay (int channel, float delaySamples) const noexcept;
     float saturate (float input, float amount) const noexcept;
     float saturateVintage (float input, float amount) const noexcept;
 
