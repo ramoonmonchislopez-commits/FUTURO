@@ -13,14 +13,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-arm64:
+  build-universal:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Confirm Apple Silicon environment
+      - name: Confirm Apple Silicon build host
         run: |
           sw_vers
           uname -m
@@ -32,31 +32,63 @@ jobs:
           brew install cmake
           cmake --version
 
-      - name: Build VST3, AU, and unsigned test installer
+      - name: Build universal VST3, AU, and unsigned test installer
         run: |
           chmod +x scripts/build_macos.sh
           ./scripts/build_macos.sh
 
-      - name: Verify bundles and installer
+      - name: Validate plug-ins with pluginval
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip" \
+            --output pluginval.zip
+          mkdir -p pluginval-dist
+          ditto -x -k pluginval.zip pluginval-dist
+          PLUGINVAL="$(find pluginval-dist -path '*/Contents/MacOS/pluginval' -type f -print -quit)"
+          test -n "$PLUGINVAL"
+          chmod +x "$PLUGINVAL"
+          VST3="$(find build-macos -type d -name 'FUTURO Spring Reverb.vst3' -print -quit)"
+          AU="$(find build-macos -type d -name 'FUTURO Spring Reverb.component' -print -quit)"
+          test -n "$VST3"
+          test -n "$AU"
+          mkdir -p dist/pluginval-logs
+          "$PLUGINVAL" --strictness-level 5 --skip-gui-tests --validate-in-process --output-dir dist/pluginval-logs --validate "$VST3"
+          "$PLUGINVAL" --strictness-level 5 --skip-gui-tests --validate-in-process --output-dir dist/pluginval-logs --validate "$AU"
+
+      - name: Upload pluginval diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FUTURO-pluginval-diagnostics
+          path: dist/pluginval-logs/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Verify universal bundles and installer
         run: |
           test -d 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3'
           test -d 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component'
-          test -f 'dist/FUTURO-Spring-Reverb-0.2.0-arm64.pkg'
+          test -f 'dist/FUTURO-Spring-Reverb-0.2.0-universal.pkg'
+          lipo -verify_arch arm64 x86_64 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3/Contents/MacOS/FUTURO Spring Reverb'
+          lipo -verify_arch arm64 x86_64 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component/Contents/MacOS/FUTURO Spring Reverb'
+          pkgutil --payload-files 'dist/FUTURO-Spring-Reverb-0.2.0-universal.pkg' | grep -E 'Audio/Plug-Ins/(VST3|Components)/FUTURO Spring Reverb' >/dev/null
 
-      - name: Archive bundles and calculate checksums
+      - name: Archive plug-ins and checksums
         run: |
           mkdir -p dist/artifacts
-          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3' 'dist/artifacts/FUTURO-Spring-Reverb-VST3-arm64.zip'
-          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component' 'dist/artifacts/FUTURO-Spring-Reverb-AU-arm64.zip'
-          cp 'dist/FUTURO-Spring-Reverb-0.2.0-arm64.pkg' dist/artifacts/
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3' 'dist/artifacts/FUTURO-Spring-Reverb-VST3-universal.zip'
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component' 'dist/artifacts/FUTURO-Spring-Reverb-AU-universal.zip'
+          cp 'dist/FUTURO-Spring-Reverb-0.2.0-universal.pkg' dist/artifacts/
           cd dist/artifacts
           shasum -a 256 ./* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: Upload build artifacts
+      - name: Upload verified build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FUTURO-Spring-Reverb-macOS-arm64
+          name: FUTURO-Spring-Reverb-macOS-universal
           path: dist/artifacts/*
           if-no-files-found: error
           retention-days: 30
