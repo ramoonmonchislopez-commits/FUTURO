@@ -89,10 +89,10 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     addAndMakeVisible (subheading);
 
     styleKnob (mix, "MIX");
-    styleKnob (saturation, "VINTAGE DRIVE / HARMONICS");
+    styleKnob (saturation, "VINTAGE DRIVE");
     styleKnob (intensity, "DECAY");
-    styleKnob (pitch, "PITCH / SEMITONES");
-    styleKnob (tone, "TONE / DAMPING");
+    styleKnob (pitch, "PITCH (ST)");
+    styleKnob (tone, "TONE");
 
     for (auto* button : { &classic, &flex, &dream })
     {
