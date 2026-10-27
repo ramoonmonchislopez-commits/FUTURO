@@ -4,7 +4,7 @@ Creative spring-inspired reverb plug-in for macOS Apple Silicon.
 
 ## Status
 
-Version 0.2.0 is an engineering build, not a verified commercial release. The code targets JUCE 9.0.4 and is configured for VST3 and Audio Unit.
+Version 0.2.0 is an engineering build, not a verified commercial release. GitHub Actions is configured to build it on a native macOS ARM64 runner when a push event is received. The code targets JUCE 9.0.4 and is configured for VST3 and Audio Unit.
 
 The DSP contains a spring-inspired diffusion and resonator feedback network, a crossfaded dual-head pitch shifter on the wet path, smoothed parameters, mono/stereo layouts, and host state serialization. The dry signal is not pitch-shifted.
 
