@@ -22,17 +22,21 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
                                                float sliderPosProportional, float rotaryStartAngle,
                                                float rotaryEndAngle, juce::Slider& slider)
 {
-    const float side = static_cast<float> (juce::jmin (width, height));
+    // Reserve a dedicated label band above the dial so long, mode-dependent names
+    // never collide with the rotary artwork or the value box below it.
+    const float labelHeight = 17.0f;
+    const float dialHeight = juce::jmax (1.0f, static_cast<float> (height) - labelHeight);
+    const float side = static_cast<float> (juce::jmin (width, juce::roundToInt (dialHeight)));
     const float radius = side * 0.405f;
     const float centreX = static_cast<float> (x) + static_cast<float> (width) * 0.5f;
-    const float centreY = static_cast<float> (y) + static_cast<float> (height) * 0.5f;
+    const float centreY = static_cast<float> (y) + labelHeight + dialHeight * 0.5f;
     const float angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
     const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
     const auto outline = slider.findColour (juce::Slider::rotarySliderOutlineColourId);
 
     g.setColour (ink.withAlpha (0.88f));
     g.setFont (juce::Font (juce::FontOptions (8.5f, juce::Font::bold)));
-    g.drawText (slider.getName(), x, y, width, 16, juce::Justification::centred);
+    g.drawText (slider.getName(), x + 2, y, width - 4, static_cast<int> (labelHeight), juce::Justification::centred);
 
     g.setColour (ink.withAlpha (0.16f));
     g.fillEllipse (centreX - radius + 2.5f, centreY - radius + 3.0f, radius * 2.0f, radius * 2.0f);
@@ -168,12 +172,12 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
     const juce::String characterName = visualMode == 0 ? "WOBBLE"
-                                    : visualMode == 1 ? "DOUBLER / FLANGER" : "MAGIC";
+                                    : visualMode == 1 ? "BLOOM" : "MAGIC";
     character.setName (characterName);
     character.setTooltip (visualMode == 0
         ? "WOBBLE: slow, tape-like movement"
         : visualMode == 1
-            ? "DOUBLER / FLANGER: modern, animated doubled spring"
+            ? "BLOOM: elastic spring rebound with a longer controlled tail"
             : "MAGIC: nostalgic, softened stereo echo");
 
     const auto accent = currentModeColour();
