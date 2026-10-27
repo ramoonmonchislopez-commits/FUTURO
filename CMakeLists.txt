@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(FUTURO_SPRING VERSION 0.7.0 LANGUAGES C CXX)
+project(FUTURO_SPRING VERSION 0.8.0 LANGUAGES C CXX)
 include(FetchContent)
 FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG 9.0.4 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(JUCE)
