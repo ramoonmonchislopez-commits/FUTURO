@@ -1,4 +1,4 @@
-# FUTURO 0.2.0 validation status
+# FUTURO 0.3.0 validation status
 
 Status: engineering build; not a verified commercial release.
 
