@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$ROOT/build-macos"
-ARCH="arm64"
+ARCHS="arm64;x86_64"
+ARCH_LABEL="universal"
 DEPLOYMENT_TARGET="11.0"
 VERSION="0.2.0"
 
@@ -21,7 +22,10 @@ if ! xcode-select -p >/dev/null 2>&1; then
 fi
 
 cmake --version
-cmake -S "$ROOT" -B "$BUILD_DIR"   -DCMAKE_BUILD_TYPE=Release   -DCMAKE_OSX_ARCHITECTURES="$ARCH"   -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
+cmake -S "$ROOT" -B "$BUILD_DIR" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_OSX_ARCHITECTURES="$ARCHS" \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
 cmake --build "$BUILD_DIR" --config Release --parallel "$(sysctl -n hw.ncpu)"
 
 VST3_PATH="$(find "$BUILD_DIR" -type d -name 'FUTURO Spring Reverb.vst3' -print -quit)"
@@ -35,6 +39,15 @@ if [[ -z "$AU_PATH" || ! -d "$AU_PATH" ]]; then
   exit 3
 fi
 
+# Assert that both architectures are actually present before packaging.
+VST3_BINARY="$VST3_PATH/Contents/MacOS/FUTURO Spring Reverb"
+AU_BINARY="$AU_PATH/Contents/MacOS/FUTURO Spring Reverb"
+for binary in "$VST3_BINARY" "$AU_BINARY"; do
+  [[ -f "$binary" ]] || { echo "ERROR: missing binary: $binary" >&2; exit 3; }
+  file "$binary"
+  lipo -verify_arch arm64 x86_64 "$binary"
+done
+
 PKGROOT="$ROOT/dist/pkgroot"
 rm -rf "$PKGROOT"
 mkdir -p "$PKGROOT/Library/Audio/Plug-Ins/VST3"
@@ -43,9 +56,21 @@ cp -R "$VST3_PATH" "$PKGROOT/Library/Audio/Plug-Ins/VST3/"
 cp -R "$AU_PATH" "$PKGROOT/Library/Audio/Plug-Ins/Components/"
 
 mkdir -p "$ROOT/dist"
-PKG="$ROOT/dist/FUTURO-Spring-Reverb-$VERSION-$ARCH.pkg"
+PKG="$ROOT/dist/FUTURO-Spring-Reverb-$VERSION-$ARCH_LABEL.pkg"
 rm -f "$PKG"
-pkgbuild   --root "$PKGROOT"   --identifier "audio.futuro.springreverb.pkg"   --version "$VERSION"   --install-location /   --ownership recommended   "$PKG"
+pkgbuild \
+  --root "$PKGROOT" \
+  --identifier "audio.futuro.springreverb.pkg" \
+  --version "$VERSION" \
+  --install-location / \
+  --ownership recommended \
+  "$PKG"
+
+pkgutil --check-signature "$PKG" || true
+pkgutil --payload-files "$PKG" | grep -E 'Audio/Plug-Ins/(VST3|Components)/FUTURO Spring Reverb' >/dev/null || {
+  echo "ERROR: installer payload does not contain the expected plug-in bundles." >&2
+  exit 4
+}
 
 echo "Build and package completed: $PKG"
 echo "WARNING: local test installer is unsigned and not notarized. A successful build is not proof of sound quality; test in the target DAW."
