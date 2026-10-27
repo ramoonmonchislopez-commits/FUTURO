@@ -45,7 +45,7 @@ AU_BINARY="$AU_PATH/Contents/MacOS/FUTURO Spring Reverb"
 for binary in "$VST3_BINARY" "$AU_BINARY"; do
   [[ -f "$binary" ]] || { echo "ERROR: missing binary: $binary" >&2; exit 3; }
   file "$binary"
-  lipo -verify_arch arm64 x86_64 "$binary"
+  lipo "$binary" -verify_arch arm64 x86_64
 done
 
 PKGROOT="$ROOT/dist/pkgroot"
