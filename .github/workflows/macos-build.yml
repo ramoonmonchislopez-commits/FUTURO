@@ -50,11 +50,22 @@ jobs:
           test -n "$PLUGINVAL"
           chmod +x "$PLUGINVAL"
           VST3="$(find build-macos -type d -name 'FUTURO Spring Reverb.vst3' -print -quit)"
-          AU="$(find build-macos -type d -name 'FUTURO Spring Reverb.component' -print -quit)"
+          AU_BUILD="$(find build-macos -type d -name 'FUTURO Spring Reverb.component' -print -quit)"
           test -n "$VST3"
-          test -n "$AU"
+          test -n "$AU_BUILD"
           mkdir -p dist/pluginval-logs
           "$PLUGINVAL" --strictness-level 5 --skip-gui-tests --validate-in-process --output-dir dist/pluginval-logs --validate "$VST3"
+
+          # Audio Units are registered by macOS from a standard Components folder.
+          # A bundle in CMake's build tree cannot be discovered by AudioComponent APIs.
+          AU_DIR="$HOME/Library/Audio/Plug-Ins/Components"
+          AU="$AU_DIR/FUTURO Spring Reverb.component"
+          mkdir -p "$AU_DIR"
+          rm -rf "$AU"
+          cp -R "$AU_BUILD" "$AU"
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          sleep 3
+          auval -v aufx Fspr Ftro
           "$PLUGINVAL" --strictness-level 5 --skip-gui-tests --validate-in-process --output-dir dist/pluginval-logs --validate "$AU"
 
       - name: Upload pluginval diagnostics
