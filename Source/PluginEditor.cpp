@@ -7,14 +7,14 @@ namespace
     const juce::Colour paper  { 0xffd8c49a };
     const juce::Colour ink    { 0xff211d18 };
     const juce::Colour orange { 0xffc65c28 };
-    const juce::Colour red    { 0xffbd4931 };
+    const juce::Colour teal   { 0xff247d78 };
     const juce::Colour blue   { 0xff426d91 };
     const juce::Colour violet { 0xff786a9f };
     const juce::Colour cream  { 0xfff0e2bd };
 
     juce::Colour blendModeColour (int mode)
     {
-        return mode == 0 ? orange : (mode == 1 ? red : blue);
+        return mode == 0 ? orange : (mode == 1 ? teal : violet);
     }
 }
 
@@ -90,7 +90,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     heading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (heading);
 
-    subheading.setText ("SPRING REVERB   /   EXPERIMENTAL UNIT 01", juce::dontSendNotification);
+    subheading.setText ("SPRING REVERB   /   THREE DISTINCT CHARACTERS", juce::dontSendNotification);
     subheading.setFont (juce::Font (juce::FontOptions (11.0f)));
     subheading.setColour (juce::Label::textColourId, ink.withAlpha (0.78f));
     subheading.setJustificationType (juce::Justification::centredLeft);
@@ -99,7 +99,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     styleKnob (mix, "MIX");
     styleKnob (saturation, "VINTAGE DRIVE");
     styleKnob (intensity, "INTENSITY");
-    styleKnob (character, "WOBBLE");
+    styleKnob (character, "VINTAGE SPRING");
     character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
 
@@ -119,9 +119,9 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     flex.onClick    = [this] { setMode (1); };
     dream.onClick   = [this] { setMode (2); };
 
-    modeParam.addItem ("CLASSIC", 1);
-    modeParam.addItem ("FLEX", 2);
-    modeParam.addItem ("DREAM", 3);
+    modeParam.addItem ("Classicus", 1);
+    modeParam.addItem ("Novus", 2);
+    modeParam.addItem ("Somnium", 3);
     modeAtt = std::make_unique<ComboAttachment> (p.parameters, "mode", modeParam);
     modeParam.setVisible (false);
 
@@ -171,14 +171,14 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
-    const juce::String characterName = visualMode == 0 ? "WOBBLE"
-                                    : visualMode == 1 ? "BLOOM" : "MAGIC";
+    const juce::String characterName = visualMode == 0 ? "VINTAGE SPRING"
+                                    : visualMode == 1 ? "VOLTAGE SAG" : "HALO";
     character.setName (characterName);
     character.setTooltip (visualMode == 0
-        ? "WOBBLE: slow, tape-like movement"
+        ? "CLASSICUS: vintage spring colour and controlled harmonic drive; no pitch modulation"
         : visualMode == 1
-            ? "BLOOM: elastic spring rebound with a longer controlled tail"
-            : "MAGIC: nostalgic, softened stereo echo");
+            ? "NOVUS: Voltage Sag, a controlled level dip with a slow recovery on the reverb return"
+            : "SOMNIUM: a dark, soft halo on the reverb return; fixed-time colour, no pitch modulation");
 
     const auto accent = currentModeColour();
     for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
@@ -327,7 +327,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (ink);
     g.setFont (juce::Font (juce::FontOptions (10.5f, juce::Font::bold)));
-    g.drawText ("SPRING SPIRIT  /  " + juce::String (visualMode == 0 ? "CLASSIC" : visualMode == 1 ? "FLEX" : "DREAM"),
+    g.drawText ("SPRING SPIRIT  /  " + juce::String (visualMode == 0 ? "CLASSICUS" : visualMode == 1 ? "NOVUS" : "SOMNIUM"),
                 0, 366, getWidth(), 18, juce::Justification::centred);
 
     g.setColour (ink.withAlpha (0.34f));
