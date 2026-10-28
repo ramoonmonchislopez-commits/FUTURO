@@ -4,9 +4,9 @@ Creative spring-inspired reverb plug-in for macOS Apple Silicon.
 
 ## Status
 
-Version 0.3.0 is an engineering build, not a verified commercial release. GitHub Actions is configured to build it on a native macOS ARM64 runner when a push event is received. The code targets JUCE 9.0.4 and is configured for VST3 and Audio Unit.
+Version 0.9.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
 
-The DSP contains a spring-inspired diffusion and resonator feedback network, a crossfaded dual-head pitch shifter on the wet path, smoothed parameters, mono/stereo layouts, and host state serialization. The dry signal is not pitch-shifted.
+The three modes are **Classicus** (vintage spring harmonics), **Novus** (Voltage Sag: amplitude dip and recovery), and **Somnium** (dark, soft wet-field halo). Character effects work only on the reverberated return: they do not modulate delay time or pitch, and the direct path remains unshifted and unfiltered. The wet field can still be coloured by Tone and each mode’s spring network.
 
 ## Build on macOS
 
@@ -18,11 +18,11 @@ The build script fetches JUCE 9.0.4, compiles VST3 and AU for arm64, and makes a
 
 ## GitHub Actions
 
-The workflow at .github/workflows/macos-build.yml builds on GitHub-hosted macOS ARM64 and uploads VST3, AU, .pkg, and SHA-256 checksums as an artifact. Open the Actions tab and download FUTURO-Spring-Reverb-macOS-arm64 from a successful run.
+The workflow at .github/workflows/macos-build.yml builds on GitHub-hosted macOS ARM64 and uploads VST3, AU, .pkg, and SHA-256 checksums as an artifact. Open the Actions tab and download the verified universal macOS artifact from a successful run.
 
 ## Validation needed
 
-A successful compilation is not proof of commercial audio quality. The plug-in must still be listened to and validated in the intended DAW, including automation, preset/state recall, tail stability, pitch artefacts, CPU usage and different sample rates/buffer sizes. Saturation is not yet oversampled, so aliasing can occur at strong drive or with bright material. The test installer is unsigned and not notarized.
+A successful compilation is not proof of commercial audio quality. The plug-in must still be listened to and validated in the intended DAW, including automation, preset/state recall, tail stability, CPU usage and different sample rates/buffer sizes. The vintage nonlinear stage is not oversampled, so strong drive can still generate aliasing. Objective tests cannot replace listening in the target DAW. The test installer is unsigned and not notarized.
 
 ## Installation locations
 
