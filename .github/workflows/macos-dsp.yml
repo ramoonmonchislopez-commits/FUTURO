@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(sed -n 's/^project(SPIRITUS_SPRING VERSION \\([0-9.]*\\).*/\\1/p' CMakeLists.txt)"
+          VERSION="$(sed -n 's/^project(SPIRITUS_SPRING VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
           test -n "$VERSION"
           ARTEFACTS="build/FUTURO_SPRING_artefacts/Release"
           AU="$ARTEFACTS/AU/Spiritus Spring Reverb.component"
