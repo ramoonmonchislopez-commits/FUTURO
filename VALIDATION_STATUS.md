@@ -8,6 +8,7 @@ Implemented in this branch:
 - Fiuso's rectifier state removes DC without discarding lower harmonic body; a Tone-controlled low-pass reduces brittle upper harmonics before the parallel saturation stages.
 - Somnium uses more diffuse and decorrelated stereo delay patterns, a feedback curve that remains below unity, more tail level, and lower early-reflection emphasis.
 - DSP regressions for finite output, bounded peaks, stable decay, Character travel, Fiuso audibility, and Somnium tail growth.
+- The impulse test waits 150 ms for parameter smoothing and the mode crossfade to settle before injecting audio, so each test actually exercises its requested mode.
 
 Not yet verified: successful CI on the final commit, AU/VST3 host validation, Ableton Live loading, listening-based quality, CPU use, real-time safety, and state/automation across full DAW sessions.
 

@@ -10,9 +10,10 @@ on:
 permissions:
   contents: read
 
+# Do not cancel a validation run during a retry; keep each submitted check visible.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   dsp-smoke:

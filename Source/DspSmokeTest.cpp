@@ -12,6 +12,7 @@ namespace
     constexpr double testRate = 44100.0;
     constexpr int blockSize = 512;
     constexpr int durationSeconds = 6;
+    constexpr double impulseTimeSeconds = 0.15;
 
     void setParameter (FuturoSpringAudioProcessor& processor, const char* id, float value)
     {
@@ -47,13 +48,18 @@ namespace
         juce::AudioBuffer<float> buffer (2, blockSize);
         juce::MidiBuffer midi;
 
+        // Let all smoothed parameters (especially Mode) reach the requested
+        // test state before exciting the reverb. An impulse at sample zero only
+        // sees the processor's constructor defaults, not the mode under test.
+        const int impulseSample = static_cast<int> (impulseTimeSeconds * testRate);
         for (int offset = 0; offset < totalSamples; offset += blockSize)
         {
             buffer.clear();
-            if (offset == 0)
+            if (impulseSample >= offset && impulseSample < offset + blockSize)
             {
-                buffer.setSample (0, 0, inputLevel);
-                buffer.setSample (1, 0, inputLevel * 0.75f);
+                const int localImpulseSample = impulseSample - offset;
+                buffer.setSample (0, localImpulseSample, inputLevel);
+                buffer.setSample (1, localImpulseSample, inputLevel * 0.75f);
             }
 
             processor.processBlock (buffer, midi);
@@ -271,8 +277,10 @@ int main()
     {
         const auto somniumShort = renderImpulse (2, 75.0f, 0.48f, 0.35f, 0.70f, 1.0f, 4.0f);
         const auto somniumExpanded = renderImpulse (2, 75.0f, 0.48f, 0.90f, 0.70f, 1.0f, 4.0f);
-        const double shortTailRms = windowRms (somniumShort, 1.0, 3.5);
-        const double expandedTailRms = windowRms (somniumExpanded, 1.0, 3.5);
+        const double shortTailRms = windowRms (somniumShort, impulseTimeSeconds + 1.0,
+                                                   impulseTimeSeconds + 3.5);
+        const double expandedTailRms = windowRms (somniumExpanded, impulseTimeSeconds + 1.0,
+                                                      impulseTimeSeconds + 3.5);
         if (! somniumShort.finite || ! somniumExpanded.finite
             || somniumShort.peak > 0.985f || somniumExpanded.peak > 0.985f
             || expandedTailRms < 0.0001
