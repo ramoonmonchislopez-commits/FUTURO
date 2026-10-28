@@ -23,19 +23,23 @@ public:
 private:
     FuturoSpringAudioProcessor& processor;
     FuturoKnobLookAndFeel knobLookAndFeel;
-    juce::Slider mix, intensity, saturation, character, tone;
+    juce::Slider mix, intensity, saturation, character, tone, inputGain, outputGain;
     juce::TextButton classic { "CLASSICUS" }, flex { "NOVUS" }, dream { "SOMNIUM" };
-    juce::Label heading, subheading;
+    juce::TextButton fiusoButton { "Fiuso" };
+    juce::Label heading, subheading, inputLabel, outputLabel;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
-    std::unique_ptr<SliderAttachment> mixAtt, intensityAtt, saturationAtt, characterAtt, toneAtt;
+    std::unique_ptr<SliderAttachment> mixAtt, intensityAtt, saturationAtt, characterAtt, toneAtt,
+                                      inputAtt, outputAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> fiusoAtt;
     std::unique_ptr<ComboAttachment> modeAtt;
     juce::ComboBox modeParam;
     float animPhase = 0.0f;
     int visualMode = 0;
 
     void styleKnob (juce::Slider&, const juce::String&);
+    void styleMiniFader (juce::Slider&, const juce::String&, juce::Label&);
     void timerCallback() override;
     void setMode (int);
     juce::Colour currentModeColour() const noexcept;
