@@ -278,8 +278,11 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         // Log-style taper gives Intensity more useful travel in the upper half.
         const float intensityCurve = std::pow (juce::jlimit (0.0f, 1.0f, smoothIntensity), 0.72f);
 
-        const float dryL = buffer.getSample (0, n) * smoothInputGain;
-        const float dryR = (inputChannels > 1 ? buffer.getSample (1, n) : buffer.getSample (0, n)) * smoothInputGain;
+        const float inputL = buffer.getSample (0, n);
+        const float inputR = inputChannels > 1 ? buffer.getSample (1, n) : inputL;
+        // Sanitize invalid host samples before they can poison filter or feedback state.
+        const float dryL = (std::isfinite (inputL) ? inputL : 0.0f) * smoothInputGain;
+        const float dryR = (std::isfinite (inputR) ? inputR : 0.0f) * smoothInputGain;
         const float shaped[2] { saturate (dryL, smoothSaturation), saturate (dryR, smoothSaturation) };
         float fiusoSource[2] { shaped[0], shaped[1] };
         if (smoothFiuso > 0.0001f)
