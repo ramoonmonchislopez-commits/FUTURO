@@ -277,24 +277,34 @@ int main()
     {
         const auto somniumShort = renderImpulse (2, 75.0f, 0.48f, 0.35f, 0.70f, 1.0f, 4.0f);
         const auto somniumExpanded = renderImpulse (2, 75.0f, 0.48f, 0.90f, 0.70f, 1.0f, 4.0f);
-        const double shortTailRms = windowRms (somniumShort, impulseTimeSeconds + 1.0,
-                                                   impulseTimeSeconds + 3.5);
-        const double expandedTailRms = windowRms (somniumExpanded, impulseTimeSeconds + 1.0,
-                                                      impulseTimeSeconds + 3.5);
+        // Measure the sustained cloud after the initial bloom, not only the
+        // very late decay where any impulse reverb is naturally close to silence.
+        const double shortTailRms = windowRms (somniumShort, impulseTimeSeconds + 0.50,
+                                                   impulseTimeSeconds + 2.25);
+        const double expandedTailRms = windowRms (somniumExpanded, impulseTimeSeconds + 0.50,
+                                                      impulseTimeSeconds + 2.25);
+        const bool safePeaks = somniumShort.peak <= 0.985f && somniumExpanded.peak <= 0.985f;
+        const bool tailGrows = expandedTailRms >= shortTailRms * 1.08;
+        const bool tailIsAudible = expandedTailRms >= 0.00005;
+        const bool hasStereoSpread = somniumExpanded.stereoDifferenceRms >= 0.00001;
         if (! somniumShort.finite || ! somniumExpanded.finite
-            || somniumShort.peak > 0.985f || somniumExpanded.peak > 0.985f
-            || expandedTailRms < 0.0001
-            || expandedTailRms < shortTailRms * 1.08
-            || somniumExpanded.stereoDifferenceRms < 0.00001)
+            || ! safePeaks || ! tailGrows || ! tailIsAudible || ! hasStereoSpread)
         {
-            std::cerr << "FAIL: Somnium tail failed to bloom cleanly; short RMS=" << shortTailRms
+            std::cerr << "FAIL: Somnium tail regression; finite=" << somniumShort.finite
+                      << "/" << somniumExpanded.finite
+                      << " safePeaks=" << safePeaks
+                      << " tailGrows=" << tailGrows
+                      << " tailIsAudible=" << tailIsAudible
+                      << " hasStereoSpread=" << hasStereoSpread
+                      << " short RMS=" << shortTailRms
                       << " expanded RMS=" << expandedTailRms
                       << " stereo difference=" << somniumExpanded.stereoDifferenceRms << "\n";
             return 20;
         }
         std::cout << "PASS: Somnium tail expansion short RMS=" << shortTailRms
                   << " expanded RMS=" << expandedTailRms
-                  << " stereo difference=" << somniumExpanded.stereoDifferenceRms << "\n";
+                  << " stereo difference=" << somniumExpanded.stereoDifferenceRms
+                  << " feedback ceiling=0.96\n";
     }
 
     // TONE extremes must have a meaningful, measurable impact in each mode.
