@@ -22,11 +22,11 @@ The workflow at .github/workflows/macos-build.yml builds on GitHub-hosted macOS 
 
 ## DSP validation
 
-The automated DSP suite covers finite output, stable decay, mode differentiation, Character and Tone response, mode-specific Drive response, the Fi﻿uso harmonic layer, IN/OUT gain-trim response, output headroom, dry-path pitch lock, and dry-path isolation from Drive.
+The automated DSP suite covers finite output, stable decay, mode differentiation, Character and Tone response, mode-specific Drive response, the Fiuso harmonic layer, IN/OUT gain-trim response, output headroom, dry-path pitch lock, and dry-path isolation from Drive.
 
 ## Validation needed
 
-A successful compilation is not proof of commercial audio quality. The plug-in must still be listened to and validated in the intended DAW, including automation, preset/state recall, tail stability, CPU usage and different sample rates/buffer sizes. The nonlinear stages are not oversampled, so extreme Drive or Fi﻿uso settings can still generate some aliasing. Fi﻿uso shapes the spring excitation with harmonic content; it is not a pitch-tracking polyphonic harmonizer. Objective tests cannot replace listening in the target DAW. The test installer is unsigned and not notarized.
+A successful compilation is not proof of commercial audio quality. The plug-in must still be listened to and validated in the intended DAW, including automation, preset/state recall, tail stability, CPU usage and different sample rates/buffer sizes. The nonlinear stages are not oversampled, so extreme Drive or Fiuso settings can still generate some aliasing. Fiuso shapes the spring excitation with harmonic content; it is not a pitch-tracking polyphonic harmonizer. Objective tests cannot replace listening in the target DAW. The test installer is unsigned and not notarized.
 
 ## Installation locations
 
