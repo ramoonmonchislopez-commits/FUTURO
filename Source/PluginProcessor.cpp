@@ -291,7 +291,14 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 auto& dc = fiusoRectifierLowpassState[static_cast<size_t> (channel)];
                 dc += fiusoRectifierAlpha * (rectified - dc);
                 const float octaveTexture = rectified - dc;
-                const float harmonicTexture = saturateSomnium (octaveTexture, 5.0f);
+                // Three parallel, bounded colour paths create a denser harmonic field
+                // without multiplying the feedback gain or adding delay-line copies.
+                const float warmLayer = saturateVintage (octaveTexture, 4.5f);
+                const float glassLayer = saturateNovus (octaveTexture, 7.0f);
+                const float softLayer = saturateSomnium (octaveTexture, 5.0f);
+                const float harmonicTexture = 0.20f * warmLayer
+                                            + 0.30f * glassLayer
+                                            + 0.50f * softLayer;
                 fiusoSource[channel] += 0.42f * smoothFiuso * harmonicTexture;
             }
         }
