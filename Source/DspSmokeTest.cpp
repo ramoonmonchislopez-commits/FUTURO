@@ -24,6 +24,7 @@ namespace
         std::vector<float> samples;
         float peak = 0.0f;
         float latePeak = 0.0f;
+        double stereoDifferenceRms = 0.0;
         bool finite = true;
     };
 
@@ -40,6 +41,7 @@ namespace
         processor.prepareToPlay (testRate, blockSize);
 
         RenderResult result;
+        double stereoDifferenceEnergy = 0.0;
         const int totalSamples = static_cast<int> (testRate * durationSeconds);
         result.samples.reserve (static_cast<size_t> (totalSamples));
         juce::AudioBuffer<float> buffer (2, blockSize);
@@ -58,18 +60,41 @@ namespace
             const int count = juce::jmin (blockSize, totalSamples - offset);
             for (int i = 0; i < count; ++i)
             {
-                const float sample = 0.5f * (buffer.getSample (0, i) + buffer.getSample (1, i));
-                if (! std::isfinite (sample))
+                const float left = buffer.getSample (0, i);
+                const float right = buffer.getSample (1, i);
+                const float sample = 0.5f * (left + right);
+                if (! std::isfinite (left) || ! std::isfinite (right))
                     result.finite = false;
-                result.peak = juce::jmax (result.peak, std::abs (sample));
+                const double stereoDelta = static_cast<double> (left) - right;
+                stereoDifferenceEnergy += stereoDelta * stereoDelta;
+                result.peak = juce::jmax (result.peak, juce::jmax (std::abs (left), std::abs (right)));
                 if (offset + i >= totalSamples - static_cast<int> (testRate * 0.5))
                     result.latePeak = juce::jmax (result.latePeak, std::abs (sample));
                 result.samples.push_back (sample);
             }
         }
 
+        result.stereoDifferenceRms = std::sqrt (stereoDifferenceEnergy / juce::jmax (1, totalSamples));
         processor.releaseResources();
         return result;
+    }
+
+    double windowRms (const RenderResult& result, double startSeconds, double endSeconds)
+    {
+        const auto first = static_cast<size_t> (juce::jlimit (0.0, static_cast<double> (result.samples.size()),
+                                                              startSeconds * testRate));
+        const auto last = static_cast<size_t> (juce::jlimit (0.0, static_cast<double> (result.samples.size()),
+                                                             endSeconds * testRate));
+        if (last <= first)
+            return 0.0;
+
+        double energy = 0.0;
+        for (size_t i = first; i < last; ++i)
+        {
+            const double sample = result.samples[i];
+            energy += sample * sample;
+        }
+        return std::sqrt (energy / static_cast<double> (last - first));
     }
 
     bool dryToneFrequencyStable (int mode, float frequency)
@@ -206,6 +231,62 @@ int main()
         std::cout << "PASS: mode " << mode << " CHARACTER difference=" << characterDifference << "\n";
     }
 
+    // Character must remain responsive across the knob, not only at its endpoints.
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        const auto character20 = renderImpulse (mode, 20.0f);
+        const auto character50 = renderImpulse (mode, 50.0f);
+        const auto character80 = renderImpulse (mode, 80.0f);
+        const auto relativeDifference = [] (const RenderResult& a, const RenderResult& b)
+        {
+            double differenceEnergy = 0.0;
+            double referenceEnergy = 0.0;
+            for (size_t i = 0; i < a.samples.size(); ++i)
+            {
+                const double x = a.samples[i];
+                const double y = b.samples[i];
+                const double d = x - y;
+                differenceEnergy += d * d;
+                referenceEnergy += x * x + y * y;
+            }
+            return std::sqrt (differenceEnergy / juce::jmax (1.0e-20, referenceEnergy));
+        };
+        const double lowMidDifference = relativeDifference (character20, character50);
+        const double midHighDifference = relativeDifference (character50, character80);
+        if (! character20.finite || ! character50.finite || ! character80.finite
+            || lowMidDifference < 0.0025 || midHighDifference < 0.0025)
+        {
+            std::cerr << "FAIL: Character has a plateau in mode " << mode
+                      << "; 20-50 difference=" << lowMidDifference
+                      << " 50-80 difference=" << midHighDifference << "\n";
+            return 19;
+        }
+        std::cout << "PASS: Character travel mode " << mode
+                  << " 20-50=" << lowMidDifference
+                  << " 50-80=" << midHighDifference << "\n";
+    }
+
+    // Higher Intensity should let Somnium bloom into an audible, finite tail while
+    // stereo decorrelation keeps the cloud expansive and its attack controlled.
+    {
+        const auto somniumShort = renderImpulse (2, 75.0f, 0.48f, 0.35f, 0.70f, 1.0f, 4.0f);
+        const auto somniumExpanded = renderImpulse (2, 75.0f, 0.48f, 0.90f, 0.70f, 1.0f, 4.0f);
+        const double shortTailRms = windowRms (somniumShort, 1.0, 3.5);
+        const double expandedTailRms = windowRms (somniumExpanded, 1.0, 3.5);
+        if (! somniumShort.finite || ! somniumExpanded.finite
+            || somniumShort.peak > 0.985f || somniumExpanded.peak > 0.985f
+            || expandedTailRms < 0.0001
+            || expandedTailRms < shortTailRms * 1.08)
+        {
+            std::cerr << "FAIL: Somnium tail failed to bloom cleanly; short RMS=" << shortTailRms
+                      << " expanded RMS=" << expandedTailRms << "\n";
+            return 20;
+        }
+        std::cout << "PASS: Somnium tail expansion short RMS=" << shortTailRms
+                  << " expanded RMS=" << expandedTailRms
+                  << " stereo difference=" << somniumExpanded.stereoDifferenceRms << "\n";
+    }
+
     // TONE extremes must have a meaningful, measurable impact in each mode.
     for (int mode = 0; mode < 3; ++mode)
     {
@@ -326,9 +407,9 @@ int main()
             }
         }
         const double difference = std::sqrt (differenceEnergy / juce::jmax (1.0e-20, referenceEnergy));
-        if (! finite || difference < 0.001)
+        if (! finite || difference < 0.004)
         {
-            std::cerr << "FAIL: FIUSO harmonic layer was inaudible or unstable; difference=" << difference << "\n";
+            std::cerr << "FAIL: FIUSO harmonic body was too subtle or unstable; difference=" << difference << "\n";
             return 12;
         }
         std::cout << "PASS: FIUSO harmonic layer difference=" << difference << "\n";
