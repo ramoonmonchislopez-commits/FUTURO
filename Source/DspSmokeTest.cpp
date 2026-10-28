@@ -304,7 +304,7 @@ int main()
         std::cout << "PASS: Somnium tail expansion short RMS=" << shortTailRms
                   << " expanded RMS=" << expandedTailRms
                   << " stereo difference=" << somniumExpanded.stereoDifferenceRms
-                  << " feedback ceiling=0.96\n";
+                  << " feedback ceiling=0.91\n";
     }
 
     // TONE extremes must have a meaningful, measurable impact in each mode.
