@@ -26,6 +26,7 @@ private:
     juce::Slider mix, intensity, saturation, character, tone, inputGain, outputGain;
     juce::TextButton classic { "CLASSICUS" }, flex { "NOVUS" }, dream { "SOMNIUM" }, fiuso { "FIUSO" };
     juce::Label heading, subheading, inputGainLabel, outputGainLabel;
+    juce::ComboBox presetMenu;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
@@ -41,6 +42,7 @@ private:
     void styleFader (juce::Slider&, const juce::String&);
     void timerCallback() override;
     void setMode (int);
+    void applyPreset (int presetId);
     juce::Colour currentModeColour() const noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FuturoSpringAudioProcessorEditor)
