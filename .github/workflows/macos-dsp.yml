@@ -28,7 +28,7 @@ jobs:
           cmake --version
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
 
       - name: Build AU, VST3, and DSP regression targets
         run: cmake --build build --config Release --target FUTURO_SPRING_AU FUTURO_SPRING_VST3 FUTURO_DSP_SMOKE_TEST --parallel 2
@@ -40,18 +40,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(sed -n 's/^project(SPIRITUS_SPRING VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          VERSION="$(sed -n 's/^project(SPIRITUS_SPRING VERSION \\([0-9.]*\\).*/\\1/p' CMakeLists.txt)"
           test -n "$VERSION"
           ARTEFACTS="build/FUTURO_SPRING_artefacts/Release"
           AU="$ARTEFACTS/AU/Spiritus Spring Reverb.component"
           VST3="$ARTEFACTS/VST3/Spiritus Spring Reverb.vst3"
           test -d "$AU"
           test -d "$VST3"
+          # Ad-hoc sign the bundles before packaging, matching the local build script.
+          codesign --force --deep --sign - "$AU"
+          codesign --force --deep --sign - "$VST3"
+          codesign --verify --deep --strict --verbose=2 "$AU"
+          codesign --verify --deep --strict --verbose=2 "$VST3"
           STAGE="$PWD/build/pkg-root"
           mkdir -p "$STAGE/Library/Audio/Plug-Ins/Components" "$STAGE/Library/Audio/Plug-Ins/VST3"
           ditto "$AU" "$STAGE/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component"
           ditto "$VST3" "$STAGE/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3"
           pkgbuild --root "$STAGE" --identifier "audio.spiritus.springreverb" --version "$VERSION" --install-location / "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg"
+          # Fail the job if the installer payload does not contain both plugin bundles.
+          pkgutil --payload-files "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg" | grep -F "Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component"
+          pkgutil --payload-files "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg" | grep -F "Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3"
           shasum -a 256 "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg" > "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg.sha256"
 
       - name: Upload installer package
