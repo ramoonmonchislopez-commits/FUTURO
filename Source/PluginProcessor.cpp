@@ -165,7 +165,7 @@ void FuturoSpringAudioProcessor::releaseResources()
     fiusoRectifierLowpassState.fill (0.0f);
     voltageSagEnvelope = 0.0f;
     voltageSagGain = 1.0f;
-    for (auto& channel : outputDelayBuffers std::fill (channel.begin(), channel.end(), 0.0f);
+    for (auto& channel : outputDelayBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
     outputPeakEnvelope = 0.0f;
     resonatorDamping.fill (0.0f);
     dampingState.fill (0.0f);
