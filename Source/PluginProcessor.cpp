@@ -83,6 +83,11 @@ FuturoSpringAudioProcessor::APVTS::ParameterLayout FuturoSpringAudioProcessor::c
         juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 35.0f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "tone", 1 }, "Tone / Damping",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.7f));
+    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "inputGain", 1 }, "Input",
+        juce::NormalisableRange<float> (-24.0f, 12.0f, 0.1f), 0.0f));
+    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "outputGain", 1 }, "Output",
+        juce::NormalisableRange<float> (-24.0f, 12.0f, 0.1f), 0.0f));
+    p.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { "fiuso", 1 }, "Fiuso", false));
     p.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "mode", 1 }, "Mode",
         juce::StringArray { "Classicus", "Novus", "Somnium" }, 0));
     return p;
@@ -127,6 +132,7 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     previousInput.fill (0.0f);
     characterLowpassState.fill (0.0f);
     classicusToneState.fill (0.0f);
+    fiusoRectifierLowpassState.fill (0.0f);
     voltageSagEnvelope = 0.0f;
     voltageSagGain = 1.0f;
 
@@ -143,6 +149,9 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     smoothSaturation = parameters.getRawParameterValue ("saturation")->load();
     smoothCharacter = parameters.getRawParameterValue ("character")->load() * 0.01f;
     smoothTone = parameters.getRawParameterValue ("tone")->load();
+    smoothInputGain = juce::Decibels::decibelsToGain (parameters.getRawParameterValue ("inputGain")->load());
+    smoothOutputGain = juce::Decibels::decibelsToGain (parameters.getRawParameterValue ("outputGain")->load());
+    smoothFiuso = parameters.getRawParameterValue ("fiuso")->load();
     smoothMode = parameters.getRawParameterValue ("mode")->load();
     parameterSmoothing = 1.0f - std::exp (-1.0f / (0.020f * fs));
 }
@@ -153,9 +162,10 @@ void FuturoSpringAudioProcessor::releaseResources()
     for (auto& line : resonators) line.clear();
     characterLowpassState.fill (0.0f);
     classicusToneState.fill (0.0f);
+    fiusoRectifierLowpassState.fill (0.0f);
     voltageSagEnvelope = 0.0f;
     voltageSagGain = 1.0f;
-    for (auto& channel : outputDelayBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
+    for (auto& channel : outputDelayBuffers std::fill (channel.begin(), channel.end(), 0.0f);
     outputPeakEnvelope = 0.0f;
     resonatorDamping.fill (0.0f);
     dampingState.fill (0.0f);
@@ -238,11 +248,15 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float targetSaturation = parameters.getRawParameterValue ("saturation")->load();
     const float targetCharacter = parameters.getRawParameterValue ("character")->load() * 0.01f;
     const float targetTone = parameters.getRawParameterValue ("tone")->load();
+    const float targetInputGain = juce::Decibels::decibelsToGain (parameters.getRawParameterValue ("inputGain")->load());
+    const float targetOutputGain = juce::Decibels::decibelsToGain (parameters.getRawParameterValue ("outputGain")->load());
+    const float targetFiuso = parameters.getRawParameterValue ("fiuso")->load();
     const float targetMode = parameters.getRawParameterValue ("mode")->load();
     const float fs = static_cast<float> (currentSampleRate);
     const float inputLPAlpha = 1.0f - std::exp (-twoPi * 2300.0f / fs);
     const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1300.0f / fs);
     const float wetBodyAlpha = 1.0f - std::exp (-twoPi * 420.0f / fs);
+    const float fiusoRectifierAlpha = 1.0f - std::exp (-twoPi * 900.0f / fs);
     const float sagEnvelopeAttack = 1.0f - std::exp (-1.0f / (0.00015f * fs));
     const float sagEnvelopeRelease = 1.0f - std::exp (-1.0f / (0.220f * fs));
     const float sagGainAttack = 1.0f - std::exp (-1.0f / (0.004f * fs));
@@ -255,14 +269,32 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         smoothSaturation += parameterSmoothing * (targetSaturation - smoothSaturation);
         smoothCharacter += parameterSmoothing * (targetCharacter - smoothCharacter);
         smoothTone += parameterSmoothing * (targetTone - smoothTone);
+        smoothInputGain += parameterSmoothing * (targetInputGain - smoothInputGain);
+        smoothOutputGain += parameterSmoothing * (targetOutputGain - smoothOutputGain);
+        smoothFiuso += parameterSmoothing * (targetFiuso - smoothFiuso);
         smoothMode += parameterSmoothing * (targetMode - smoothMode);
 
         // Log-style taper gives Intensity more useful travel in the upper half.
         const float intensityCurve = std::pow (juce::jlimit (0.0f, 1.0f, smoothIntensity), 0.72f);
 
-        const float dryL = buffer.getSample (0, n);
-        const float dryR = inputChannels > 1 ? buffer.getSample (1, n) : dryL;
+        const float dryL = buffer.getSample (0, n) * smoothInputGain;
+        const float dryR = (inputChannels > 1 ? buffer.getSample (1, n) : buffer.getSample (0, n)) * smoothInputGain;
         const float shaped[2] { saturate (dryL, smoothSaturation), saturate (dryR, smoothSaturation) };
+        float fiusoSource[2] { shaped[0], shaped[1] };
+        if (smoothFiuso > 0.0001f)
+        {
+            for (int channel = 0; channel < inputChannels; ++channel)
+            {
+                // Full-wave rectification produces a stable octave-up harmonic series.
+                // Remove its DC component before feeding the spring; the dry path is untouched.
+                const float rectified = std::abs (shaped[channel]);
+                auto& dc = fiusoRectifierLowpassState[static_cast<size_t> (channel)];
+                dc += fiusoRectifierAlpha * (rectified - dc);
+                const float octaveTexture = rectified - dc;
+                const float harmonicTexture = saturateSomnium (octaveTexture, 5.0f);
+                fiusoSource[channel] += 0.42f * smoothFiuso * harmonicTexture;
+            }
+        }
 
         // Separate banks run concurrently so changing modes crossfades between distinct
         // delay networks and does not jump their internal delay-line state.
@@ -279,18 +311,18 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         for (int channel = 0; channel < inputChannels; ++channel)
         {
             dampingState[static_cast<size_t> (channel)] += inputLPAlpha
-                * (shaped[channel] - dampingState[static_cast<size_t> (channel)]);
+                * (fiusoSource[channel] - dampingState[static_cast<size_t> (channel)]);
             const float sourceLow = dampingState[static_cast<size_t> (channel)];
-            const float sourceHigh = shaped[channel] - sourceLow;
+            const float sourceHigh = fiusoSource[channel] - sourceLow;
             // This fast edge cue feeds Novus to give picked notes a springy snap.
-            const float transient = shaped[channel] - previousInput[static_cast<size_t> (channel)];
-            previousInput[static_cast<size_t> (channel)] = shaped[channel];
+            const float transient = fiusoSource[channel] - previousInput[static_cast<size_t> (channel)];
+            previousInput[static_cast<size_t> (channel)] = fiusoSource[channel];
 
             for (int mode = 0; mode < numModes; ++mode)
             {
-                const float source = mode == 0 ? shaped[channel]
-                    : mode == 1 ? (0.50f * shaped[channel] + 1.08f * sourceHigh + 0.14f * transient)
-                                : (0.62f * sourceLow + 0.38f * shaped[channel]);
+                const float source = mode == 0 ? fiusoSource[channel]
+                    : mode == 1 ? (0.50f * fiusoSource[channel] + 1.08f * sourceHigh + 0.14f * transient)
+                                : (0.62f * sourceLow + 0.38f * fiusoSource[channel]);
                 const float diffuserCoefficient = mode == 0 ? 0.68f : mode == 1 ? 0.39f : 0.79f;
                 const float diffused = processDiffuser (channel, mode, source, diffuserCoefficient);
 
@@ -467,8 +499,8 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         const float mix = juce::jlimit (0.0f, 1.0f, smoothMix);
         const float dryGain = std::cos (0.5f * juce::MathConstants<float>::pi * mix);
         const float wetGain = std::sin (0.5f * juce::MathConstants<float>::pi * mix);
-        const float rawOutL = dryL * dryGain + wetL * wetGain;
-        const float rawOutR = dryR * dryGain + wetR * wetGain;
+        const float rawOutL = (dryL * dryGain + wetL * wetGain) * smoothOutputGain;
+        const float rawOutR = (dryR * dryGain + wetR * wetGain) * smoothOutputGain;
 
         // Linked, lookahead peak control prevents clipping without adding saturation.
         const float peakNow = juce::jmax (std::abs (rawOutL), std::abs (rawOutR));
