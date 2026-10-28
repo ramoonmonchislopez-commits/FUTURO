@@ -217,7 +217,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float fs = static_cast<float> (currentSampleRate);
     const float inputLPAlpha = 1.0f - std::exp (-twoPi * 2300.0f / fs);
     const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1300.0f / fs);
-    const float sagEnvelopeAttack = 1.0f - std::exp (-1.0f / (0.0025f * fs));
+    const float sagEnvelopeAttack = 1.0f - std::exp (-1.0f / (0.00015f * fs));
     const float sagEnvelopeRelease = 1.0f - std::exp (-1.0f / (0.220f * fs));
     const float sagGainAttack = 1.0f - std::exp (-1.0f / (0.006f * fs));
     const float sagGainRelease = 1.0f - std::exp (-1.0f / (0.180f * fs));
