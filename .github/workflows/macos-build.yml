@@ -1,4 +1,4 @@
-name: FUTURO macOS Build
+name: Spiritus macOS Build
 
 on:
   push:
