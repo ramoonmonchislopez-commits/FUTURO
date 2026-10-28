@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SPIRITUS_SPRING VERSION 0.12.1 LANGUAGES C CXX)
+project(SPIRITUS_SPRING VERSION 0.13.0 LANGUAGES C CXX)
 include(FetchContent)
 FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG 9.0.4 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(JUCE)
