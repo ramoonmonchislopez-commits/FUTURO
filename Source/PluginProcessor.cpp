@@ -361,14 +361,16 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     const float loopInput = diffused * excitation
                         + feedback * feedbackSignal
                         + crossFeedback * otherResonators;
-                    const float boundedLoopInput = juce::jlimit (-1.5f, 1.5f, loopInput);
+                    // Avoid a second, hard non-linearity immediately before the smooth mode saturator.
+                    // The discontinuous clamp can add brittle high-frequency energy at strong resonances.
+                    // Keep the feedback curves smooth; stability remains covered by the DSP regression tests.
                     float saturatedLoop = 0.0f;
                     if (mode == 0)
-                        saturatedLoop = saturateVintage (boundedLoopInput, 2.2f + smoothSaturation * 1.05f);
+                        saturatedLoop = saturateVintage (loopInput, 2.2f + smoothSaturation * 1.05f);
                     else if (mode == 1)
-                        saturatedLoop = saturateNovus (boundedLoopInput, 1.8f + smoothSaturation * 1.15f);
+                        saturatedLoop = saturateNovus (loopInput, 1.8f + smoothSaturation * 1.15f);
                     else
-                        saturatedLoop = saturateSomnium (boundedLoopInput, 1.4f + smoothSaturation * 0.90f);
+                        saturatedLoop = saturateSomnium (loopInput, 1.4f + smoothSaturation * 0.90f);
                     resonators[resonatorIndex (channel, mode, stage)].write (saturatedLoop);
                     output += delayed[stage] * resonatorGains[mode][stage];
                 }
