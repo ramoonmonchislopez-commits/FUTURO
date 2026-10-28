@@ -608,10 +608,10 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawRoundedRectangle (outer, 20.0f, 1.1f);
     g.setColour (line.withAlpha (0.65f));
     g.drawRoundedRectangle (outer.reduced (5.0f), 16.0f, 0.8f);
-    drawVintageScrew (outer.getX() + 18.0f, outer.getY() + 18.0f);
-    drawVintageScrew (outer.getRight() - 18.0f, outer.getY() + 18.0f);
-    drawVintageScrew (outer.getX() + 18.0f, outer.getBottom() - 18.0f);
-    drawVintageScrew (outer.getRight() - 18.0f, outer.getBottom() - 18.0f);
+    drawVintageScrew (g, outer.getX() + 18.0f, outer.getY() + 18.0f);
+    drawVintageScrew (g, outer.getRight() - 18.0f, outer.getY() + 18.0f);
+    drawVintageScrew (g, outer.getX() + 18.0f, outer.getBottom() - 18.0f);
+    drawVintageScrew (g, outer.getRight() - 18.0f, outer.getBottom() - 18.0f);
 
     // Sparse scanlines and technical guide marks keep the finish analog, not noisy.
     g.setColour (chalkHighlight.withAlpha (0.025f));
@@ -622,14 +622,14 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (line.withAlpha (0.68f));
     g.drawLine (30.0f, 103.0f, static_cast<float> (width - 30), 103.0f, 0.8f);
     g.setColour (auraColour);
-    g.fillEllipse (width - 48.0f, 31.0f, 7.0f, 7.0f);
+    g.fillEllipse (static_cast<float> (width) - 48.0f, 31.0f, 7.0f, 7.0f);
     g.setColour (cream.withAlpha (0.68f));
     g.setFont (juce::Font (juce::FontOptions (9.2f)));
     g.drawText ("SPRING REVERB  /  CHALK & CIRCUITRY", width - 360, 45, 300, 17,
                 juce::Justification::centredRight);
 
     // Technical target marks around the characters.
-    const float cx = width * 0.56f;
+    const float cx = static_cast<float> (width) * 0.56f;
     const float cy = 246.0f;
     const float ringBreath = 1.0f + 0.025f * breathe * (0.25f + mood);
     const float ringW = (216.0f + mood * 38.0f) * ringBreath;
@@ -1055,7 +1055,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawLine (30.0f, static_cast<float> (height - 195), static_cast<float> (width - 30),
                 static_cast<float> (height - 195), 0.8f);
     g.setColour (auraColour.withAlpha (0.85f));
-    g.fillEllipse (width - 47.0f, height - 31.0f, 6.0f, 6.0f);
+    g.fillEllipse (static_cast<float> (width) - 47.0f, static_cast<float> (height) - 31.0f, 6.0f, 6.0f);
     g.setColour (cream.withAlpha (0.52f));
     g.setFont (juce::Font (juce::FontOptions (8.3f)));
     g.drawText ("DIFFERENT ANGELS. SAME DREAM.", 30, height - 30, 260, 14,
@@ -1088,14 +1088,14 @@ void FuturoSpringAudioProcessorEditor::resized()
     const int largeWidth = 146;
     const int largeHeight = 144;
 
-    mix.setBounds (juce::roundToInt (width * fractions[0]) - standardWidth / 2,
+    mix.setBounds (juce::roundToInt (static_cast<float> (width) * fractions[0]) - standardWidth / 2,
                    knobTop + 9, standardWidth, standardHeight);
-    saturation.setBounds (juce::roundToInt (width * fractions[1]) - standardWidth / 2,
+    saturation.setBounds (juce::roundToInt (static_cast<float> (width) * fractions[1]) - standardWidth / 2,
                           knobTop + 9, standardWidth, standardHeight);
-    intensity.setBounds (juce::roundToInt (width * fractions[2]) - largeWidth / 2,
+    intensity.setBounds (juce::roundToInt (static_cast<float> (width) * fractions[2]) - largeWidth / 2,
                          knobTop - 1, largeWidth, largeHeight);
-    character.setBounds (juce::roundToInt (width * fractions[3]) - standardWidth / 2,
+    character.setBounds (juce::roundToInt (static_cast<float> (width) * fractions[3]) - standardWidth / 2,
                          knobTop + 9, standardWidth, standardHeight);
-    tone.setBounds (juce::roundToInt (width * fractions[4]) - standardWidth / 2,
+    tone.setBounds (juce::roundToInt (static_cast<float> (width) * fractions[4]) - standardWidth / 2,
                     knobTop + 9, standardWidth, standardHeight);
 }
