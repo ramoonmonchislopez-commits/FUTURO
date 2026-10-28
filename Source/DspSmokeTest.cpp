@@ -255,6 +255,23 @@ int main()
                   << " peak=" << pushedDrive.peak << " latePeak=" << pushedDrive.latePeak << "\n";
     }
 
+    // Regression for the smooth-feedback change: a hot, fully wet, maximum-drive impulse
+    // must stay finite, remain under the output ceiling, and decay instead of regenerating.
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        const auto stressed = renderImpulse (mode, 65.0f, 0.70f, 1.0f, 8.0f, 1.0f, 18.0f);
+        if (! stressed.finite || stressed.peak > 0.985f || stressed.latePeak > 0.001f)
+        {
+            std::cerr << "FAIL: stressed wet feedback unstable in mode " << mode
+                      << "; finite=" << stressed.finite
+                      << " peak=" << stressed.peak
+                      << " latePeak=" << stressed.latePeak << "\\n";
+            return 14;
+        }
+        std::cout << "PASS: mode " << mode << " stressed wet feedback peak="
+                  << stressed.peak << " latePeak=" << stressed.latePeak << "\\n";
+    }
+
     // FIUSO must add a measurable harmonic layer to the wet spring, without instability.
     {
         FuturoSpringAudioProcessor plain, fiuso;
