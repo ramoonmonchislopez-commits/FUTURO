@@ -4,13 +4,17 @@
 
 namespace
 {
-    const juce::Colour paper  { 0xffd8c49a };
-    const juce::Colour ink    { 0xff211d18 };
-    const juce::Colour orange { 0xffc65c28 };
-    const juce::Colour teal   { 0xff247d78 };
-    const juce::Colour blue   { 0xff426d91 };
-    const juce::Colour violet { 0xff786a9f };
-    const juce::Colour cream  { 0xfff0e2bd };
+    const juce::Colour paper  { 0xfff1ece3 };
+    const juce::Colour ink    { 0xff292a29 };
+    const juce::Colour orange { 0xffc7826c };
+    const juce::Colour teal   { 0xff4b8d7c };
+    const juce::Colour blue   { 0xff5485b8 };
+    const juce::Colour violet { 0xff8877a8 };
+    const juce::Colour cream  { 0xfffbf8f1 };
+    const juce::Colour line   { 0xffd8d0c5 };
+    const juce::Colour green  { 0xff55965e };
+    const juce::Colour rose   { 0xffd9a096 };
+    const juce::Colour charcoal { 0xff504b50 };
 
     juce::Colour blendModeColour (int mode)
     {
@@ -22,58 +26,45 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
                                                float sliderPosProportional, float rotaryStartAngle,
                                                float rotaryEndAngle, juce::Slider& slider)
 {
-    // Reserve a dedicated label band above the dial so long, mode-dependent names
-    // never collide with the rotary artwork or the value box below it.
-    const float labelHeight = 17.0f;
+    const float labelHeight = 16.0f;
     const float dialHeight = juce::jmax (1.0f, static_cast<float> (height) - labelHeight);
-    const float side = static_cast<float> (juce::jmin (width, juce::roundToInt (dialHeight)));
-    const float radius = side * 0.405f;
+    const float side = static_cast<float> (juce::jmin (width - 4, juce::roundToInt (dialHeight)));
+    const float radius = side * 0.375f;
     const float centreX = static_cast<float> (x) + static_cast<float> (width) * 0.5f;
     const float centreY = static_cast<float> (y) + labelHeight + dialHeight * 0.5f;
     const float angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
     const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
-    const auto outline = slider.findColour (juce::Slider::rotarySliderOutlineColourId);
 
-    g.setColour (ink.withAlpha (0.88f));
-    g.setFont (juce::Font (juce::FontOptions (8.5f, juce::Font::bold)));
-    g.drawText (slider.getName(), x + 2, y, width - 4, static_cast<int> (labelHeight), juce::Justification::centred);
+    g.setColour (ink.withAlpha (0.76f));
+    g.setFont (juce::Font (juce::FontOptions (8.8f, juce::Font::bold)));
+    g.drawText (slider.getName().toUpperCase(), x + 1, y, width - 2,
+                static_cast<int> (labelHeight), juce::Justification::centred);
 
-    g.setColour (ink.withAlpha (0.16f));
-    g.fillEllipse (centreX - radius + 2.5f, centreY - radius + 3.0f, radius * 2.0f, radius * 2.0f);
-    g.setColour (outline);
-    g.fillEllipse (centreX - radius - 2.0f, centreY - radius - 2.0f, radius * 2.0f + 4.0f, radius * 2.0f + 4.0f);
-    g.setColour (paper.brighter (0.06f));
+    g.setColour (ink.withAlpha (0.07f));
+    g.fillEllipse (centreX - radius + 2.0f, centreY - radius + 3.5f,
+                   radius * 2.0f, radius * 2.0f);
+    g.setColour (line);
+    g.fillEllipse (centreX - radius - 2.0f, centreY - radius - 2.0f,
+                   radius * 2.0f + 4.0f, radius * 2.0f + 4.0f);
+    g.setColour (cream);
     g.fillEllipse (centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
 
-    for (int i = 0; i <= 16; ++i)
-    {
-        const float proportion = static_cast<float> (i) / 16.0f;
-        const float tickAngle = rotaryStartAngle + proportion * (rotaryEndAngle - rotaryStartAngle)
-                              - juce::MathConstants<float>::halfPi;
-        const float inner = radius * (i % 4 == 0 ? 0.76f : 0.83f);
-        const float outer = radius * 0.91f;
-        g.setColour (i / 16.0f <= sliderPosProportional ? accent : ink.withAlpha (0.40f));
-        g.drawLine (centreX + inner * std::cos (tickAngle), centreY + inner * std::sin (tickAngle),
-                    centreX + outer * std::cos (tickAngle), centreY + outer * std::sin (tickAngle),
-                    i % 4 == 0 ? 1.8f : 1.0f);
-    }
-
-    g.setColour (ink.withAlpha (0.90f));
-    g.fillEllipse (centreX - radius * 0.68f, centreY - radius * 0.68f,
-                   radius * 1.36f, radius * 1.36f);
-    g.setColour (paper.withAlpha (0.18f));
-    g.drawEllipse (centreX - radius * 0.59f, centreY - radius * 0.59f,
-                   radius * 1.18f, radius * 1.18f, 1.0f);
+    juce::Path activeArc;
+    activeArc.addCentredArc (centreX, centreY, radius + 3.6f, radius + 3.6f, 0.0f,
+                             rotaryStartAngle - juce::MathConstants<float>::halfPi,
+                             angle - juce::MathConstants<float>::halfPi, true);
+    g.setColour (accent);
+    g.strokePath (activeArc, juce::PathStrokeType (2.7f, juce::PathStrokeType::curved,
+                                                   juce::PathStrokeType::rounded));
 
     const float pointerAngle = angle - juce::MathConstants<float>::halfPi;
-    const float pointerInner = radius * 0.15f;
-    const float pointerOuter = radius * 0.61f;
+    g.setColour (ink);
+    g.drawLine (centreX + std::cos (pointerAngle) * radius * 0.16f,
+                centreY + std::sin (pointerAngle) * radius * 0.16f,
+                centreX + std::cos (pointerAngle) * radius * 0.68f,
+                centreY + std::sin (pointerAngle) * radius * 0.68f, 2.2f);
     g.setColour (accent);
-    g.drawLine (centreX + pointerInner * std::cos (pointerAngle),
-                centreY + pointerInner * std::sin (pointerAngle),
-                centreX + pointerOuter * std::cos (pointerAngle),
-                centreY + pointerOuter * std::sin (pointerAngle), 3.0f);
-    g.fillEllipse (centreX - 3.0f, centreY - 3.0f, 6.0f, 6.0f);
+    g.fillEllipse (centreX - 2.0f, centreY - 2.0f, 4.0f, 4.0f);
 }
 
 FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpringAudioProcessor& p)
@@ -84,14 +75,14 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     setResizeLimits (860, 620, 1240, 840);
     setLookAndFeel (&knobLookAndFeel);
 
-    heading.setText ("SPIRITUS", juce::dontSendNotification);
-    heading.setFont (juce::Font (juce::FontOptions (41.0f, juce::Font::bold)));
+    heading.setText ("FUTURO", juce::dontSendNotification);
+    heading.setFont (juce::Font (juce::FontOptions (38.0f)));
     heading.setColour (juce::Label::textColourId, ink);
     heading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (heading);
 
-    subheading.setText ("SPRING REVERB   /   THREE DISTINCT CHARACTERS", juce::dontSendNotification);
-    subheading.setFont (juce::Font (juce::FontOptions (11.0f)));
+    subheading.setText ("REVERB   ·   BY RAMON LOPEZ", juce::dontSendNotification);
+    subheading.setFont (juce::Font (juce::FontOptions (10.5f)));
     subheading.setColour (juce::Label::textColourId, ink.withAlpha (0.78f));
     subheading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (subheading);
@@ -101,7 +92,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     presetMenu.addItem ("Voltage Kiss", 3);
     presetMenu.addItem ("Lunar Halo", 4);
     presetMenu.addItem ("Temple Bloom", 5);
-    presetMenu.setTextWhenNothingSelected ("FACTORY PRESETS");
+    presetMenu.setTextWhenNothingSelected ("COPPER BLOOM");
     presetMenu.setTooltip ("Five contrasted factory voices: Copper Bloom, Studio Coil, Voltage Kiss, Lunar Halo, and Temple Bloom. All controls remain editable.");
     presetMenu.setColour (juce::ComboBox::backgroundColourId, cream);
     presetMenu.setColour (juce::ComboBox::textColourId, ink);
@@ -144,11 +135,11 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     {
         button->setClickingTogglesState (true);
         button->setRadioGroupId (901);
-        button->setColour (juce::TextButton::buttonColourId, paper.darker (0.08f));
+        button->setColour (juce::TextButton::buttonColourId, cream.withAlpha (0.72f));
         button->setColour (juce::TextButton::buttonOnColourId, orange);
         button->setColour (juce::TextButton::textColourOffId, ink);
         button->setColour (juce::TextButton::textColourOnId, cream);
-        button->setConnectedEdges (juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+        button->setConnectedEdges (0);
         addAndMakeVisible (*button);
     }
 
@@ -199,8 +190,8 @@ void FuturoSpringAudioProcessorEditor::styleFader (juce::Slider& slider, const j
     slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 18);
     slider.setTextValueSuffix (" dB");
     slider.setLookAndFeel (&knobLookAndFeel);
-    slider.setColour (juce::Slider::trackColourId, teal);
-    slider.setColour (juce::Slider::thumbColourId, ink);
+    slider.setColour (juce::Slider::trackColourId, line);
+    slider.setColour (juce::Slider::thumbColourId, currentModeColour());
     slider.setColour (juce::Slider::textBoxTextColourId, ink);
     slider.setColour (juce::Slider::textBoxBackgroundColourId, paper.withAlpha (0.0f));
     slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -350,140 +341,244 @@ void FuturoSpringAudioProcessorEditor::timerCallback()
 void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (paper);
-    const auto outer = getLocalBounds().toFloat().reduced (12.0f);
+    const auto outer = getLocalBounds().toFloat().reduced (11.0f);
     const auto modeColour = currentModeColour();
+    const float intensityValue = juce::jlimit (0.0f, 1.0f,
+        processor.parameters.getRawParameterValue ("intensity")->load());
+    const float pulse = std::sin (animPhase * (1.15f + intensityValue * 0.85f));
+    const float breathe = std::sin (animPhase * 1.7f);
 
-    g.setColour (ink);
-    g.drawRoundedRectangle (outer, 13.0f, 2.0f);
-    g.setColour (ink.withAlpha (0.24f));
-    g.drawRoundedRectangle (outer.reduced (7.0f), 10.0f, 1.0f);
-
-    g.setColour (ink.withAlpha (0.055f));
-    for (int i = 0; i < 180; ++i)
-    {
-        const int gx = 23 + ((i * 97 + 31) % juce::jmax (1, getWidth() - 46));
-        const int gy = 18 + ((i * 53 + 17) % juce::jmax (1, getHeight() - 36));
-        const float diameter = (i % 7 == 0) ? 1.8f : 0.8f;
-        g.fillEllipse (static_cast<float> (gx), static_cast<float> (gy), diameter, diameter);
-    }
-
-    g.setColour (ink.withAlpha (0.34f));
-    g.drawLine (30.0f, 105.0f, static_cast<float> (getWidth() - 30), 105.0f, 1.0f);
-    g.setColour (modeColour);
-    g.fillEllipse (getWidth() - 48.0f, 31.0f, 9.0f, 9.0f);
-    g.setColour (ink.withAlpha (0.78f));
-    g.setFont (juce::Font (juce::FontOptions (10.0f, juce::Font::bold)));
-    g.drawText ("ANALOG IMAGINATION / DIGITAL RESONANCE", getWidth() - 350, 48, 300, 18,
-                juce::Justification::centredRight);
-
-    const float intensityValue = processor.parameters.getRawParameterValue ("intensity")->load();
-    const float cx = getWidth() * 0.56f;
-    const float cy = 245.0f;
-    const float radius = 91.0f + intensityValue * 26.0f;
-    const float breathing = 1.0f + 0.035f * std::sin (animPhase * 1.8f) * intensityValue;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        const float ringScale = (1.0f + i * 0.105f) * breathing;
-        const auto orbit = juce::Rectangle<float> (cx - radius * ringScale,
-            cy - radius * 0.73f * ringScale, radius * 2.0f * ringScale, radius * 1.46f * ringScale);
-        g.setColour (modeColour.withAlpha (0.38f - static_cast<float> (i) * 0.055f));
-        g.drawEllipse (orbit, i == 0 ? 1.8f : 1.1f);
-    }
-    for (int i = 0; i < 11; ++i)
-    {
-        const float angle = animPhase + juce::MathConstants<float>::twoPi * static_cast<float> (i) / 11.0f;
-        const float orbitX = radius * (1.0f + 0.08f * std::sin (animPhase * 1.4f));
-        const float orbitY = radius * 0.73f;
-        const float px = cx + std::cos (angle) * orbitX;
-        const float py = cy + std::sin (angle) * orbitY;
-        const float dotSize = 2.0f + intensityValue * 2.3f;
-        g.setColour (modeColour.withAlpha (0.60f));
-        g.fillEllipse (px - dotSize * 0.5f, py - dotSize * 0.5f, dotSize, dotSize);
-    }
-
-    const float bob = std::sin (animPhase * 1.8f) * (1.5f + intensityValue * 7.0f);
-    const float faceSize = 92.0f + intensityValue * 8.0f;
-    g.setColour (ink);
-    g.fillRoundedRectangle (cx - 33.0f, cy + 29.0f + bob, 66.0f, 70.0f, 17.0f);
-    g.setColour (modeColour);
-    g.fillEllipse (cx - faceSize * 0.5f - 5.0f, cy - faceSize * 0.5f + bob,
-                   faceSize + 10.0f, faceSize + 10.0f);
+    // A quiet, editorial frame: warm paper, thin dividers and generous space.
     g.setColour (cream);
-    g.fillEllipse (cx - faceSize * 0.5f, cy - faceSize * 0.5f + 5.0f + bob, faceSize, faceSize);
-    g.setColour (ink.withAlpha (0.28f));
-    g.drawEllipse (cx - faceSize * 0.5f + 4.0f, cy - faceSize * 0.5f + 9.0f + bob,
-                   faceSize - 8.0f, faceSize - 8.0f, 1.0f);
+    g.fillRoundedRectangle (outer, 16.0f);
+    g.setColour (line);
+    g.drawRoundedRectangle (outer, 16.0f, 1.0f);
+    g.setColour (line.withAlpha (0.9f));
+    g.drawLine (30.0f, 105.0f, static_cast<float> (getWidth() - 30), 105.0f, 1.0f);
 
-    const float eyeHeight = 5.0f + intensityValue * 8.5f;
-    const float eyeY = cy - 12.0f + bob - intensityValue * 2.0f;
-    g.setColour (ink);
-    g.fillEllipse (cx - 21.0f, eyeY - eyeHeight * 0.5f, 11.0f, eyeHeight);
-    g.fillEllipse (cx + 10.0f, eyeY - eyeHeight * 0.5f, 11.0f, eyeHeight);
-    g.drawLine (cx - 24.0f, cy - 27.0f + bob, cx - 8.0f, cy - 24.0f + bob, 2.0f);
-    g.drawLine (cx + 8.0f, cy - 24.0f + bob, cx + 24.0f, cy - 27.0f + bob, 2.0f);
+    g.setColour (modeColour);
+    g.fillEllipse (getWidth() - 49.0f, 33.0f, 7.0f, 7.0f);
+    g.setColour (ink.withAlpha (0.63f));
+    g.setFont (juce::Font (juce::FontOptions (9.5f)));
+    g.drawText ("ANALOG TEXTURE  /  DIGITAL RESONANCE",
+                getWidth() - 350, 46, 300, 18, juce::Justification::centredRight);
 
-    const float mouthWidth = 13.0f + intensityValue * 20.0f;
-    const float mouthHeight = 7.0f + intensityValue * 12.0f;
-    g.setColour (ink);
-    if (intensityValue < 0.15f)
-        g.drawLine (cx - 7.0f, cy + 11.0f + bob, cx + 7.0f, cy + 11.0f + bob, 2.0f);
-    else
+    // The pair is upright, based on the artist's own sketch: green angel
+    // embracing the taller blue angel, with the pink and charcoal wings retained.
+    const float cx = getWidth() * 0.575f;
+    const float cy = 241.0f;
+    const float ringBreath = 1.0f + 0.025f * breathe * (0.25f + intensityValue);
+    const float ringW = (174.0f + intensityValue * 42.0f) * ringBreath;
+    const float ringH = (194.0f + intensityValue * 48.0f) * ringBreath;
+
+    for (int i = 2; i >= 0; --i)
     {
-        juce::Path smile;
-        smile.addArc (cx - mouthWidth * 0.5f, cy + 3.0f + bob, mouthWidth, mouthHeight,
-                      0.20f, juce::MathConstants<float>::pi - 0.20f, true);
-        g.strokePath (smile, juce::PathStrokeType (2.3f + intensityValue));
+        const float expansion = 1.0f + static_cast<float> (i) * 0.12f + intensityValue * 0.07f;
+        g.setColour (modeColour.withAlpha (0.055f + intensityValue * 0.055f
+                                           - static_cast<float> (i) * 0.012f));
+        g.drawEllipse (cx - ringW * expansion * 0.5f, cy - ringH * expansion * 0.5f,
+                       ringW * expansion, ringH * expansion, i == 0 ? 1.45f : 0.9f);
     }
 
+    const float orbitRx = ringW * 0.5f + 7.0f;
+    const float orbitRy = ringH * 0.5f + 7.0f;
+    for (int i = 0; i < 7; ++i)
+    {
+        const float a = animPhase + juce::MathConstants<float>::twoPi
+                      * static_cast<float> (i) / 7.0f;
+        const float dot = 1.4f + intensityValue * 2.2f;
+        g.setColour (modeColour.withAlpha (0.2f + intensityValue * 0.24f));
+        g.fillEllipse (cx + std::cos (a) * orbitRx - dot * 0.5f,
+                       cy + std::sin (a) * orbitRy - dot * 0.5f, dot, dot);
+    }
+
+    const float characterScale = 0.77f + intensityValue * 0.19f
+                               + breathe * (0.004f + intensityValue * 0.012f);
+    const float bob = pulse * (1.0f + intensityValue * 4.2f);
+    const float wingOpen = 0.91f + intensityValue * 0.15f + std::sin (animPhase * 1.3f) * 0.018f;
+    juce::Graphics::ScopedSaveState saved (g);
+    g.addTransform (juce::AffineTransform (characterScale, 0.0f, cx,
+                                           0.0f, characterScale, cy + bob));
+
+    // Pale peach wing behind the green angel.
+    juce::Path peachWing;
+    peachWing.startNewSubPath (-42.0f, -5.0f);
+    peachWing.cubicTo (-64.0f, -22.0f, -91.0f, -10.0f, -91.0f, 11.0f);
+    peachWing.cubicTo (-91.0f, 31.0f, -73.0f, 45.0f, -55.0f, 37.0f);
+    peachWing.cubicTo (-48.0f, 34.0f, -43.0f, 25.0f, -39.0f, 17.0f);
+    peachWing.closeSubPath();
+    juce::Path peachFeathers;
+    peachFeathers.startNewSubPath (-48.0f, -1.0f);
+    peachFeathers.cubicTo (-67.0f, -17.0f, -80.0f, -8.0f, -78.0f, 5.0f);
+    peachFeathers.startNewSubPath (-47.0f, 8.0f);
+    peachFeathers.cubicTo (-68.0f, -1.0f, -78.0f, 12.0f, -65.0f, 23.0f);
+    peachFeathers.startNewSubPath (-45.0f, 16.0f);
+    peachFeathers.cubicTo (-58.0f, 10.0f, -67.0f, 27.0f, -54.0f, 31.0f);
+    g.setColour (rose.withAlpha (0.97f));
+    g.fillPath (peachWing);
+    g.setColour (cream.withAlpha (0.96f));
+    g.strokePath (peachFeathers, juce::PathStrokeType (4.0f, juce::PathStrokeType::curved,
+                                                       juce::PathStrokeType::rounded));
+
+    // The blue angel sits slightly behind: long body and softly pointed head.
+    juce::Path blueBody;
+    blueBody.startNewSubPath (10.0f, -55.0f);
+    blueBody.cubicTo (-2.0f, -62.0f, -4.0f, -76.0f, 5.0f, -88.0f);
+    blueBody.cubicTo (15.0f, -102.0f, 34.0f, -95.0f, 37.0f, -79.0f);
+    blueBody.cubicTo (39.0f, -68.0f, 35.0f, -59.0f, 29.0f, -52.0f);
+    blueBody.cubicTo (31.0f, -18.0f, 42.0f, 48.0f, 58.0f, 104.0f);
+    blueBody.cubicTo (63.0f, 120.0f, 53.0f, 132.0f, 41.0f, 124.0f);
+    blueBody.cubicTo (24.0f, 111.0f, 19.0f, 60.0f, 12.0f, 17.0f);
+    blueBody.cubicTo (9.0f, 1.0f, 4.0f, -4.0f, -2.0f, 8.0f);
+    blueBody.cubicTo (-10.0f, 22.0f, -22.0f, 14.0f, -16.0f, 2.0f);
+    blueBody.cubicTo (-8.0f, -15.0f, 2.0f, -36.0f, 10.0f, -55.0f);
+    blueBody.closeSubPath();
+    g.setColour (blue);
+    g.fillPath (blueBody);
+
+    // Charcoal wing on the blue angel's right shoulder, with hand-drawn feather ribs.
+    juce::Path darkWing;
+    darkWing.startNewSubPath (29.0f, -33.0f);
+    darkWing.cubicTo (44.0f, -57.0f, 70.0f, -57.0f, 87.0f, -42.0f);
+    darkWing.cubicTo (105.0f, -27.0f, 110.0f, -9.0f, 95.0f, 1.0f);
+    darkWing.cubicTo (83.0f, 10.0f, 68.0f, -2.0f, 57.0f, -7.0f);
+    darkWing.cubicTo (46.0f, -10.0f, 37.0f, -6.0f, 31.0f, 2.0f);
+    darkWing.cubicTo (27.0f, -8.0f, 24.0f, -22.0f, 29.0f, -33.0f);
+    darkWing.closeSubPath();
+    g.setColour (charcoal);
+    g.fillPath (darkWing);
+    juce::Path darkFeathers;
+    for (int i = 0; i < 3; ++i)
+    {
+        const float yy = -39.0f + static_cast<float> (i) * 11.0f;
+        darkFeathers.startNewSubPath (37.0f, yy);
+        darkFeathers.cubicTo (54.0f, yy - 9.0f, 77.0f, yy + 2.0f, 91.0f, yy + 13.0f);
+    }
+    g.setColour (cream.withAlpha (0.58f));
+    g.strokePath (darkFeathers, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
+                                                      juce::PathStrokeType::rounded));
+    g.setColour (cream.withAlpha (0.68f));
+    g.drawEllipse (30.0f, -30.0f, 13.0f, 13.0f, 2.0f);
+
+    // A small blue highlight and dot eye keep the original simple face language.
+    g.setColour (cream.withAlpha (0.28f));
+    g.drawLine (5.0f, -75.0f, 2.0f, -65.0f, 1.2f);
+    g.setColour (ink);
+    g.fillEllipse (16.0f, -80.0f, 4.7f, 4.7f);
+
+    // Green angel in front, wrapping its arm around the blue figure.
+    juce::Path greenBody;
+    greenBody.startNewSubPath (-42.0f, -13.0f);
+    greenBody.cubicTo (-55.0f, -20.0f, -56.0f, -38.0f, -47.0f, -48.0f);
+    greenBody.cubicTo (-38.0f, -59.0f, -23.0f, -53.0f, -21.0f, -40.0f);
+    greenBody.cubicTo (-19.0f, -29.0f, -24.0f, -20.0f, -30.0f, -13.0f);
+    greenBody.cubicTo (-28.0f, 14.0f, -23.0f, 53.0f, -25.0f, 88.0f);
+    greenBody.cubicTo (-26.0f, 105.0f, -34.0f, 119.0f, -43.0f, 116.0f);
+    greenBody.cubicTo (-54.0f, 113.0f, -50.0f, 97.0f, -47.0f, 79.0f);
+    greenBody.cubicTo (-43.0f, 48.0f, -49.0f, 23.0f, -49.0f, 7.0f);
+    greenBody.cubicTo (-49.0f, -2.0f, -47.0f, -8.0f, -42.0f, -13.0f);
+    greenBody.closeSubPath();
+    g.setColour (green);
+    g.fillPath (greenBody);
+
+    juce::Path embraceArm;
+    embraceArm.startNewSubPath (-37.0f, 4.0f);
+    embraceArm.cubicTo (-24.0f, -1.0f, -13.0f, -18.0f, -2.0f, -31.0f);
+    embraceArm.cubicTo (8.0f, -43.0f, 17.0f, -48.0f, 23.0f, -41.0f);
+    embraceArm.cubicTo (28.0f, -35.0f, 17.0f, -27.0f, 9.0f, -19.0f);
+    embraceArm.cubicTo (-2.0f, -7.0f, -15.0f, 8.0f, -29.0f, 17.0f);
+    embraceArm.cubicTo (-36.0f, 21.0f, -42.0f, 15.0f, -37.0f, 4.0f);
+    embraceArm.closeSubPath();
+    g.fillPath (embraceArm);
+
+    g.setColour (cream.withAlpha (0.26f));
+    juce::Path greenHighlight;
+    greenHighlight.startNewSubPath (-44.0f, -35.0f);
+    greenHighlight.cubicTo (-48.0f, -23.0f, -44.0f, -12.0f, -41.0f, -2.0f);
+    g.strokePath (greenHighlight, juce::PathStrokeType (1.1f, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+    g.setColour (ink);
+    g.fillEllipse (-39.0f, -39.0f, 4.2f, 4.2f);
+
+    // The tilted ice-blue halo above the green angel is always part of its identity.
+    juce::Path halo;
+    halo.addEllipse (-50.0f, -64.0f, 27.0f, 7.3f);
+    g.setColour (blue.withAlpha (0.86f));
+    g.strokePath (halo, juce::PathStrokeType (2.3f, juce::PathStrokeType::curved,
+                                              juce::PathStrokeType::rounded));
+    g.setColour (cream.withAlpha (0.92f));
+    g.drawLine (-45.0f, -60.3f, -28.0f, -60.3f, 0.8f);
+
+    // Small mode-specific accessory: warm spark, Voltage lightning, or Somnium moon.
     if (visualMode == 0)
     {
-        g.setColour (ink);
-        g.fillEllipse (cx - 43.0f, cy - 48.0f + bob, 86.0f, 12.0f);
-        g.fillRoundedRectangle (cx - 25.0f, cy - 64.0f + bob, 50.0f, 21.0f, 4.0f);
-        g.setColour (cream);
-        g.drawLine (cx - 13.0f, cy - 57.0f + bob, cx + 13.0f, cy - 57.0f + bob, 1.0f);
+        g.setColour (orange.withAlpha (0.9f));
+        g.drawLine (57.0f, -96.0f, 57.0f, -84.0f, 1.8f);
+        g.drawLine (51.0f, -90.0f, 63.0f, -90.0f, 1.8f);
+        g.drawLine (53.0f, -94.0f, 61.0f, -86.0f, 1.0f);
+        g.drawLine (61.0f, -94.0f, 53.0f, -86.0f, 1.0f);
     }
     else if (visualMode == 1)
     {
-        juce::Path prongs;
-        prongs.startNewSubPath (cx - 33.0f, cy - 35.0f + bob);
-        prongs.lineTo (cx - 53.0f, cy - 69.0f - intensityValue * 6.0f + bob);
-        prongs.lineTo (cx - 20.0f, cy - 49.0f + bob);
-        prongs.lineTo (cx + 28.0f, cy - 36.0f + bob);
-        prongs.lineTo (cx + 54.0f, cy - 67.0f - intensityValue * 6.0f + bob);
-        prongs.lineTo (cx + 38.0f, cy - 29.0f + bob);
-        prongs.closeSubPath();
-        g.setColour (ink);
-        g.fillPath (prongs);
-        g.setColour (cream.withAlpha (0.75f));
-        g.drawLine (cx - 43.0f, cy - 58.0f + bob, cx - 32.0f, cy - 48.0f + bob, 1.2f);
-        g.drawLine (cx + 43.0f, cy - 57.0f + bob, cx + 32.0f, cy - 47.0f + bob, 1.2f);
+        juce::Path bolt;
+        bolt.startNewSubPath (57.0f, -107.0f);
+        bolt.lineTo (47.0f, -92.0f);
+        bolt.lineTo (55.0f, -93.0f);
+        bolt.lineTo (51.0f, -80.0f);
+        bolt.lineTo (66.0f, -99.0f);
+        bolt.lineTo (58.0f, -97.0f);
+        bolt.closeSubPath();
+        g.setColour (orange);
+        g.fillPath (bolt);
+        g.setColour (cream.withAlpha (0.85f));
+        g.drawLine (57.0f, -101.0f, 53.0f, -94.0f, 1.0f);
     }
     else
     {
-        g.setColour (violet);
-        g.drawEllipse (cx - 68.0f, cy - 75.0f + bob, 136.0f, 136.0f, 4.0f);
-        g.setColour (blue);
-        g.fillEllipse (cx + 42.0f, cy - 71.0f + bob, 16.0f, 16.0f);
+        g.setColour (violet.withAlpha (0.95f));
+        g.fillEllipse (50.0f, -106.0f, 16.0f, 16.0f);
         g.setColour (cream);
-        g.fillEllipse (cx + 46.0f, cy - 67.0f + bob, 8.0f, 8.0f);
+        g.fillEllipse (57.0f, -111.0f, 16.0f, 16.0f);
+        g.setColour (violet);
+        g.fillEllipse (73.0f, -93.0f, 3.6f, 3.6f);
+        g.fillEllipse (47.0f, -87.0f, 2.6f, 2.6f);
     }
 
-    g.setColour (ink);
-    g.setFont (juce::Font (juce::FontOptions (10.5f, juce::Font::bold)));
-    g.drawText ("SPIRITUS  /  " + juce::String (visualMode == 0 ? "CLASSICUS" : visualMode == 1 ? "NOVUS" : "SOMNIUM"),
-                0, 366, getWidth(), 18, juce::Justification::centred);
+    if (fiuso.getToggleState())
+    {
+        juce::Path jewel;
+        jewel.startNewSubPath (48.0f, 126.0f);
+        jewel.lineTo (56.0f, 137.0f);
+        jewel.lineTo (48.0f, 149.0f);
+        jewel.lineTo (40.0f, 137.0f);
+        jewel.closeSubPath();
+        g.setColour (orange.withAlpha (0.85f));
+        g.fillPath (jewel);
+        g.setColour (cream);
+        g.drawLine (48.0f, 129.0f, 48.0f, 145.0f, 0.9f);
+    }
+    saved.~ScopedSaveState();
 
-    g.setColour (ink.withAlpha (0.34f));
+    const juce::String modeName = visualMode == 0 ? "CLASSICUS"
+                                : visualMode == 1 ? "NOVUS" : "SOMNIUM";
+    const juce::String modeSubtitle = visualMode == 0 ? "SPRING  ·  WARMTH"
+                                   : visualMode == 1 ? "SAG  ·  VOLTAGE"
+                                   : "HALO  ·  DREAM";
+    g.setColour (ink.withAlpha (0.85f));
+    g.setFont (juce::Font (juce::FontOptions (10.2f, juce::Font::bold)));
+    g.drawText (modeName, 0, 361, getWidth(), 16, juce::Justification::centred);
+    g.setColour (ink.withAlpha (0.48f));
+    g.setFont (juce::Font (juce::FontOptions (8.4f)));
+    g.drawText (modeSubtitle, 0, 378, getWidth(), 14, juce::Justification::centred);
+
+    g.setColour (line);
     g.drawLine (30.0f, static_cast<float> (getHeight() - 204), static_cast<float> (getWidth() - 30),
                 static_cast<float> (getHeight() - 204), 1.0f);
-    g.setColour (modeColour.withAlpha (0.9f));
-    g.fillEllipse (getWidth() - 48.0f, getHeight() - 32.0f, 8.0f, 8.0f);
-
-    g.setColour (ink.withAlpha (0.62f));
+    g.setColour (modeColour.withAlpha (0.8f));
+    g.fillEllipse (getWidth() - 48.0f, getHeight() - 32.0f, 7.0f, 7.0f);
+    g.setColour (ink.withAlpha (0.56f));
     g.setFont (juce::Font (juce::FontOptions (8.5f)));
-    g.drawText ("SPIRITUS AUDIO  /  MONO + STEREO", 30, getHeight() - 31, 260, 14,
+    g.drawText ("DIFFERENT ANGELS. SAME DREAM.", 30, getHeight() - 31, 260, 14,
                 juce::Justification::centredLeft);
 }
 
@@ -491,19 +586,19 @@ void FuturoSpringAudioProcessorEditor::resized()
 {
     const int width = getWidth();
     const int height = getHeight();
-    heading.setBounds (36, 22, 300, 48);
-    subheading.setBounds (40, 69, 420, 20);
-    presetMenu.setBounds (width - 292, 73, 260, 24);
+    heading.setBounds (36, 22, 300, 46);
+    subheading.setBounds (40, 67, 420, 20);
+    presetMenu.setBounds (width - 292, 66, 260, 27);
 
     const int left = 34;
     classic.setBounds (left, 139, 116, 35);
     flex.setBounds (left, 183, 116, 35);
     dream.setBounds (left, 227, 116, 35);
-    inputGainLabel.setBounds (left, 276, 42, 14);
-    inputGain.setBounds (left, 290, 126, 24);
-    outputGainLabel.setBounds (left, 314, 42, 14);
-    outputGain.setBounds (left, 328, 126, 24);
-    fiuso.setBounds (juce::roundToInt (width * 0.56f) - 67, 389, 134, 34);
+    inputGainLabel.setBounds (left, 278, 42, 14);
+    inputGain.setBounds (left, 292, 132, 24);
+    outputGainLabel.setBounds (left, 320, 42, 14);
+    outputGain.setBounds (left, 334, 132, 24);
+    fiuso.setBounds (juce::roundToInt (width * 0.575f) - 54, 398, 108, 28);
 
     const float fractions[5] { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f };
     const int knobTop = height - 180;
