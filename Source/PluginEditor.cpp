@@ -4,17 +4,20 @@
 
 namespace
 {
-    const juce::Colour paper  { 0xfff1ece3 };
-    const juce::Colour ink    { 0xff292a29 };
-    const juce::Colour orange { 0xffc7826c };
-    const juce::Colour teal   { 0xff4b8d7c };
-    const juce::Colour blue   { 0xff5485b8 };
-    const juce::Colour violet { 0xff8877a8 };
-    const juce::Colour cream  { 0xfffbf8f1 };
-    const juce::Colour line   { 0xffd8d0c5 };
-    const juce::Colour green  { 0xff55965e };
-    const juce::Colour rose   { 0xffd9a096 };
-    const juce::Colour charcoal { 0xff504b50 };
+    const juce::Colour paper    { 0xff151a25 };
+    const juce::Colour ink      { 0xfff4ecdf };
+    const juce::Colour orange   { 0xffffb08f };
+    const juce::Colour teal     { 0xff67d4cc };
+    const juce::Colour blue     { 0xff70c3ff };
+    const juce::Colour violet   { 0xffce9bff };
+    const juce::Colour cream    { 0xfffbf3e6 };
+    const juce::Colour line     { 0xff4c586a };
+    const juce::Colour green    { 0xff83d779 };
+    const juce::Colour rose     { 0xffffb8a8 };
+    const juce::Colour charcoal { 0xff343743 };
+    const juce::Colour surface  { 0xff242b39 };
+    const juce::Colour faceInk  { 0xff18212d };
+    const juce::Colour redGlow  { 0xffff776e };
 
     juce::Colour blendModeColour (int mode)
     {
@@ -26,7 +29,7 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
                                                float sliderPosProportional, float rotaryStartAngle,
                                                float rotaryEndAngle, juce::Slider& slider)
 {
-    const float labelHeight = 16.0f;
+    const float labelHeight = 17.0f;
     const float dialHeight = juce::jmax (1.0f, static_cast<float> (height) - labelHeight);
     const float side = static_cast<float> (juce::jmin (width - 4, juce::roundToInt (dialHeight)));
     const float radius = side * 0.375f;
@@ -35,34 +38,54 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
     const float angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
     const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
 
-    g.setColour (ink.withAlpha (0.76f));
+    g.setColour (ink.withAlpha (0.88f));
     g.setFont (juce::Font (juce::FontOptions (8.8f, juce::Font::bold)));
     g.drawText (slider.getName().toUpperCase(), x + 1, y, width - 2,
                 static_cast<int> (labelHeight), juce::Justification::centred);
 
-    g.setColour (ink.withAlpha (0.07f));
-    g.fillEllipse (centreX - radius + 2.0f, centreY - radius + 3.5f,
-                   radius * 2.0f, radius * 2.0f);
-    g.setColour (line);
+    // Gunmetal dial, metallic edge and restrained neon halo.
+    g.setColour (accent.withAlpha (0.11f));
+    g.drawEllipse (centreX - radius - 7.0f, centreY - radius - 7.0f,
+                   radius * 2.0f + 14.0f, radius * 2.0f + 14.0f, 4.0f);
+    g.setColour (surface.brighter (0.18f));
     g.fillEllipse (centreX - radius - 2.0f, centreY - radius - 2.0f,
                    radius * 2.0f + 4.0f, radius * 2.0f + 4.0f);
-    g.setColour (cream);
+
+    juce::ColourGradient faceGradient (juce::Colour (0xff3a4557),
+                                        centreX - radius, centreY - radius,
+                                        juce::Colour (0xff171d28),
+                                        centreX + radius, centreY + radius, false);
+    g.setGradientFill (faceGradient);
     g.fillEllipse (centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
+    g.setColour (cream.withAlpha (0.18f));
+    g.drawEllipse (centreX - radius + 3.0f, centreY - radius + 3.0f,
+                   radius * 2.0f - 6.0f, radius * 2.0f - 6.0f, 1.0f);
+
+    juce::Path trackArc;
+    trackArc.addCentredArc (centreX, centreY, radius + 4.8f, radius + 4.8f, 0.0f,
+                            rotaryStartAngle - juce::MathConstants<float>::halfPi,
+                            rotaryEndAngle - juce::MathConstants<float>::halfPi, true);
+    g.setColour (line.withAlpha (0.74f));
+    g.strokePath (trackArc, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
+                                                  juce::PathStrokeType::rounded));
 
     juce::Path activeArc;
-    activeArc.addCentredArc (centreX, centreY, radius + 3.6f, radius + 3.6f, 0.0f,
+    activeArc.addCentredArc (centreX, centreY, radius + 4.8f, radius + 4.8f, 0.0f,
                              rotaryStartAngle - juce::MathConstants<float>::halfPi,
                              angle - juce::MathConstants<float>::halfPi, true);
+    g.setColour (accent.withAlpha (0.20f));
+    g.strokePath (activeArc, juce::PathStrokeType (7.0f, juce::PathStrokeType::curved,
+                                                   juce::PathStrokeType::rounded));
     g.setColour (accent);
-    g.strokePath (activeArc, juce::PathStrokeType (2.7f, juce::PathStrokeType::curved,
+    g.strokePath (activeArc, juce::PathStrokeType (2.8f, juce::PathStrokeType::curved,
                                                    juce::PathStrokeType::rounded));
 
     const float pointerAngle = angle - juce::MathConstants<float>::halfPi;
-    g.setColour (ink);
-    g.drawLine (centreX + std::cos (pointerAngle) * radius * 0.16f,
-                centreY + std::sin (pointerAngle) * radius * 0.16f,
+    g.setColour (cream);
+    g.drawLine (centreX + std::cos (pointerAngle) * radius * 0.15f,
+                centreY + std::sin (pointerAngle) * radius * 0.15f,
                 centreX + std::cos (pointerAngle) * radius * 0.68f,
-                centreY + std::sin (pointerAngle) * radius * 0.68f, 2.2f);
+                centreY + std::sin (pointerAngle) * radius * 0.68f, 2.0f);
     g.setColour (accent);
     g.fillEllipse (centreX - 2.0f, centreY - 2.0f, 4.0f, 4.0f);
 }
@@ -77,13 +100,13 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
 
     heading.setText ("FUTURO", juce::dontSendNotification);
     heading.setFont (juce::Font (juce::FontOptions (38.0f)));
-    heading.setColour (juce::Label::textColourId, ink);
+    heading.setColour (juce::Label::textColourId, cream);
     heading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (heading);
 
     subheading.setText ("REVERB   ·   BY RAMON LOPEZ", juce::dontSendNotification);
     subheading.setFont (juce::Font (juce::FontOptions (10.5f)));
-    subheading.setColour (juce::Label::textColourId, ink.withAlpha (0.78f));
+    subheading.setColour (juce::Label::textColourId, cream.withAlpha (0.68f));
     subheading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (subheading);
 
@@ -94,9 +117,9 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     presetMenu.addItem ("Temple Bloom", 5);
     presetMenu.setTextWhenNothingSelected ("COPPER BLOOM");
     presetMenu.setTooltip ("Five contrasted factory voices: Copper Bloom, Studio Coil, Voltage Kiss, Lunar Halo, and Temple Bloom. All controls remain editable.");
-    presetMenu.setColour (juce::ComboBox::backgroundColourId, cream);
-    presetMenu.setColour (juce::ComboBox::textColourId, ink);
-    presetMenu.setColour (juce::ComboBox::outlineColourId, ink.withAlpha (0.45f));
+    presetMenu.setColour (juce::ComboBox::backgroundColourId, surface);
+    presetMenu.setColour (juce::ComboBox::textColourId, cream);
+    presetMenu.setColour (juce::ComboBox::outlineColourId, line);
     presetMenu.setColour (juce::ComboBox::arrowColourId, orange);
     presetMenu.onChange = [this]
     {
@@ -124,25 +147,25 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     for (auto* label : { &inputGainLabel, &outputGainLabel })
     {
         label->setFont (juce::Font (juce::FontOptions (9.0f, juce::Font::bold)));
-        label->setColour (juce::Label::textColourId, ink.withAlpha (0.86f));
+        label->setColour (juce::Label::textColourId, cream.withAlpha (0.82f));
         label->setJustificationType (juce::Justification::centredLeft);
         addAndMakeVisible (*label);
     }
     inputGainLabel.setText ("IN", juce::dontSendNotification);
     outputGainLabel.setText ("OUT", juce::dontSendNotification);
 
-    classic.setButtonText ("CLASSICUS");
-    flex.setButtonText ("NOVUS");
-    dream.setButtonText ("SOMNIUM");
+    classic.setButtonText ("✦  CLASSICUS");
+    flex.setButtonText ("≋  NOVUS");
+    dream.setButtonText ("☾  SOMNIUM");
 
     for (auto* button : { &classic, &flex, &dream })
     {
         button->setClickingTogglesState (true);
         button->setRadioGroupId (901);
-        button->setColour (juce::TextButton::buttonColourId, cream.withAlpha (0.72f));
+        button->setColour (juce::TextButton::buttonColourId, surface.withAlpha (0.90f));
         button->setColour (juce::TextButton::buttonOnColourId, orange);
-        button->setColour (juce::TextButton::textColourOffId, ink);
-        button->setColour (juce::TextButton::textColourOnId, cream);
+        button->setColour (juce::TextButton::textColourOffId, cream.withAlpha (0.78f));
+        button->setColour (juce::TextButton::textColourOnId, paper);
         button->setConnectedEdges (0);
         addAndMakeVisible (*button);
     }
@@ -152,11 +175,11 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     dream.onClick   = [this] { setMode (2); };
 
     fiuso.setClickingTogglesState (true);
-    fiuso.setColour (juce::TextButton::buttonColourId, ink);
+    fiuso.setColour (juce::TextButton::buttonColourId, surface);
     fiuso.setColour (juce::TextButton::buttonOnColourId, orange);
-    fiuso.setColour (juce::TextButton::textColourOffId, cream);
-    fiuso.setColour (juce::TextButton::textColourOnId, cream);
-    fiuso.setButtonText ("Fiuso");
+    fiuso.setColour (juce::TextButton::textColourOffId, cream.withAlpha (0.82f));
+    fiuso.setColour (juce::TextButton::textColourOnId, paper);
+    fiuso.setButtonText ("≋  FIŪSO  /  HARMONICS");
     fiuso.setTooltip ("Fiuso adds octave-up and related even-harmonic texture to the spring excitation; the direct path stays clean");
     addAndMakeVisible (fiuso);
 
@@ -176,6 +199,8 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     fiusoAtt      = std::make_unique<ButtonAttachment> (p.parameters, "fiuso", fiuso);
 
     setMode (static_cast<int> (p.parameters.getRawParameterValue ("mode")->load()));
+    animatedIntensity = juce::jlimit (0.0f, 1.0f,
+        p.parameters.getRawParameterValue ("intensity")->load());
     startTimerHz (24);
 }
 
@@ -194,9 +219,9 @@ void FuturoSpringAudioProcessorEditor::styleFader (juce::Slider& slider, const j
     slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 18);
     slider.setTextValueSuffix (" dB");
     slider.setLookAndFeel (&knobLookAndFeel);
-    slider.setColour (juce::Slider::trackColourId, line);
+    slider.setColour (juce::Slider::trackColourId, line.brighter (0.15f));
     slider.setColour (juce::Slider::thumbColourId, currentModeColour());
-    slider.setColour (juce::Slider::textBoxTextColourId, ink);
+    slider.setColour (juce::Slider::textBoxTextColourId, cream);
     slider.setColour (juce::Slider::textBoxBackgroundColourId, paper.withAlpha (0.0f));
     slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     addAndMakeVisible (slider);
@@ -209,11 +234,11 @@ void FuturoSpringAudioProcessorEditor::styleKnob (juce::Slider& slider, const ju
     slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 82, 18);
     slider.setLookAndFeel (&knobLookAndFeel);
     slider.setColour (juce::Slider::rotarySliderFillColourId, orange);
-    slider.setColour (juce::Slider::rotarySliderOutlineColourId, ink.withAlpha (0.78f));
-    slider.setColour (juce::Slider::textBoxTextColourId, ink);
+    slider.setColour (juce::Slider::rotarySliderOutlineColourId, line.withAlpha (0.9f));
+    slider.setColour (juce::Slider::textBoxTextColourId, cream);
     slider.setColour (juce::Slider::textBoxBackgroundColourId, paper.withAlpha (0.0f));
     slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    slider.setColour (juce::Slider::textBoxHighlightColourId, orange.withAlpha (0.35f));
+    slider.setColour (juce::Slider::textBoxHighlightColourId, orange.withAlpha (0.38f));
     addAndMakeVisible (slider);
 }
 
@@ -332,7 +357,16 @@ void FuturoSpringAudioProcessorEditor::applyPreset (int presetId)
 
 void FuturoSpringAudioProcessorEditor::timerCallback()
 {
-    animPhase += 0.035f + processor.parameters.getRawParameterValue ("intensity")->load() * 0.09f;
+    const float targetIntensity = juce::jlimit (0.0f, 1.0f,
+        processor.parameters.getRawParameterValue ("intensity")->load());
+    const float intensityDelta = targetIntensity - animatedIntensity;
+
+    // Follow the host parameter with an eased UI value; face and wings never snap.
+    animatedIntensity += intensityDelta * 0.12f;
+    if (std::abs (intensityDelta) < 0.001f)
+        animatedIntensity = targetIntensity;
+
+    animPhase += 0.035f + animatedIntensity * 0.09f;
     if (animPhase > juce::MathConstants<float>::twoPi)
         animPhase -= juce::MathConstants<float>::twoPi;
 
@@ -340,73 +374,122 @@ void FuturoSpringAudioProcessorEditor::timerCallback()
         static_cast<int> (processor.parameters.getRawParameterValue ("mode")->load()));
     if (hostMode != visualMode)
         setMode (hostMode);
-    else
-        repaint();
+
+    repaint();
 }
 
 void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (paper);
-    const auto outer = getLocalBounds().toFloat().reduced (11.0f);
+    const int width = getWidth();
+    const int height = getHeight();
+    const auto outer = getLocalBounds().toFloat().reduced (10.0f);
     const auto modeColour = currentModeColour();
-    const float intensityValue = juce::jlimit (0.0f, 1.0f,
-        processor.parameters.getRawParameterValue ("intensity")->load());
-    const float pulse = std::sin (animPhase * (1.15f + intensityValue * 0.85f));
-    const float breathe = std::sin (animPhase * 1.7f);
-
-    // A quiet, editorial frame: warm paper, thin dividers and generous space.
-    g.setColour (cream);
-    g.fillRoundedRectangle (outer, 16.0f);
-    g.setColour (line);
-    g.drawRoundedRectangle (outer, 16.0f, 1.0f);
-    g.setColour (line.withAlpha (0.9f));
-    g.drawLine (30.0f, 105.0f, static_cast<float> (getWidth() - 30), 105.0f, 1.0f);
-
-    g.setColour (modeColour);
-    g.fillEllipse (getWidth() - 49.0f, 33.0f, 7.0f, 7.0f);
-    g.setColour (ink.withAlpha (0.63f));
-    g.setFont (juce::Font (juce::FontOptions (9.5f)));
-    g.drawText ("ANALOG TEXTURE  /  DIGITAL RESONANCE",
-                getWidth() - 350, 46, 300, 18, juce::Justification::centredRight);
-
-    // The pair is upright, based on the artist's own sketch: green angel
-    // embracing the taller blue angel, with the pink and charcoal wings retained.
-    const float cx = getWidth() * 0.575f;
-    const float cy = 230.0f;
-    const float ringBreath = 1.0f + 0.025f * breathe * (0.25f + intensityValue);
-    const float ringW = (150.0f + intensityValue * 35.0f) * ringBreath;
-    const float ringH = (154.0f + intensityValue * 28.0f) * ringBreath;
-
-    for (int i = 2; i >= 0; --i)
+    const float mood = juce::jlimit (0.0f, 1.0f, animatedIntensity);
+    const auto smoothStep = [] (float value)
     {
-        const float expansion = 1.0f + static_cast<float> (i) * 0.12f + intensityValue * 0.07f;
-        g.setColour (modeColour.withAlpha (0.055f + intensityValue * 0.055f
-                                           - static_cast<float> (i) * 0.012f));
+        const float t = juce::jlimit (0.0f, 1.0f, value);
+        return t * t * (3.0f - 2.0f * t);
+    };
+    const float happy = smoothStep (mood);
+    const float sad = 1.0f - smoothStep (mood / 0.44f);
+    const float devil = smoothStep ((mood - 0.56f) / 0.44f);
+    const float pulse = std::sin (animPhase * (1.15f + mood * 0.95f));
+    const float breathe = std::sin (animPhase * 1.7f);
+    const auto auraColour = modeColour.interpolatedWith (orange, devil * 0.78f);
+
+    // Retro-futurist glass panel, deep ink and a pair of warm/cool edge glows.
+    juce::ColourGradient backgroundGradient (juce::Colour (0xff0d111a), 0.0f, 0.0f,
+                                              juce::Colour (0xff222a3a),
+                                              static_cast<float> (width), static_cast<float> (height), false);
+    g.setGradientFill (backgroundGradient);
+    g.fillAll();
+
+    juce::ColourGradient panelGradient (juce::Colour (0xf32c3445), outer.getX(), outer.getY(),
+                                         juce::Colour (0xf41a202d), outer.getRight(), outer.getBottom(), false);
+    g.setGradientFill (panelGradient);
+    g.fillRoundedRectangle (outer, 20.0f);
+
+    g.setColour (blue.withAlpha (0.14f));
+    g.drawRoundedRectangle (outer.reduced (1.2f), 20.0f, 5.0f);
+    g.setColour (orange.withAlpha (0.35f));
+    g.drawRoundedRectangle (outer, 20.0f, 1.1f);
+    g.setColour (line.withAlpha (0.65f));
+    g.drawRoundedRectangle (outer.reduced (5.0f), 16.0f, 0.8f);
+
+    // Sparse scanlines and technical guide marks keep the finish analog, not noisy.
+    g.setColour (cream.withAlpha (0.018f));
+    for (int y = 112; y < height - 188; y += 5)
+        g.drawLine (24.0f, static_cast<float> (y), static_cast<float> (width - 24),
+                    static_cast<float> (y), 0.45f);
+
+    g.setColour (line.withAlpha (0.68f));
+    g.drawLine (30.0f, 103.0f, static_cast<float> (width - 30), 103.0f, 0.8f);
+    g.setColour (auraColour);
+    g.fillEllipse (width - 48.0f, 31.0f, 7.0f, 7.0f);
+    g.setColour (cream.withAlpha (0.68f));
+    g.setFont (juce::Font (juce::FontOptions (9.2f)));
+    g.drawText ("SPRING REVERB  /  ANALOG IMAGINATION", width - 360, 45, 300, 17,
+                juce::Justification::centredRight);
+
+    // Technical target marks around the characters.
+    const float cx = width * 0.595f;
+    const float cy = 246.0f;
+    const float ringBreath = 1.0f + 0.025f * breathe * (0.25f + mood);
+    const float ringW = (216.0f + mood * 38.0f) * ringBreath;
+    const float ringH = (262.0f + mood * 43.0f) * ringBreath;
+
+    for (int i = 3; i >= 0; --i)
+    {
+        const float expansion = 1.0f + static_cast<float> (i) * 0.13f + devil * 0.08f;
+        const float alpha = 0.075f + mood * 0.04f + devil * 0.075f - static_cast<float> (i) * 0.012f;
+        g.setColour (auraColour.withAlpha (alpha));
         g.drawEllipse (cx - ringW * expansion * 0.5f, cy - ringH * expansion * 0.5f,
-                       ringW * expansion, ringH * expansion, i == 0 ? 1.45f : 0.9f);
+                       ringW * expansion, ringH * expansion, i == 0 ? 1.35f : 0.75f);
     }
 
-    const float orbitRx = ringW * 0.5f + 7.0f;
-    const float orbitRy = ringH * 0.5f + 7.0f;
-    for (int i = 0; i < 7; ++i)
+    // Two slow orbit rings and a few warm particles react to the character's mood.
+    const float orbitRx = ringW * 0.54f;
+    const float orbitRy = ringH * 0.53f;
+    for (int i = 0; i < 9; ++i)
     {
-        const float a = animPhase + juce::MathConstants<float>::twoPi
-                      * static_cast<float> (i) / 7.0f;
-        const float dot = 1.4f + intensityValue * 2.2f;
-        g.setColour (modeColour.withAlpha (0.2f + intensityValue * 0.24f));
+        const float a = animPhase * (0.45f + devil * 0.50f)
+                      + juce::MathConstants<float>::twoPi * static_cast<float> (i) / 9.0f;
+        const float dot = 1.3f + mood * 1.2f + devil * 1.6f;
+        const auto dotColour = (i % 3 == 0 ? orange : modeColour)
+                               .withAlpha (0.24f + mood * 0.22f + devil * 0.24f);
+        g.setColour (dotColour);
         g.fillEllipse (cx + std::cos (a) * orbitRx - dot * 0.5f,
                        cy + std::sin (a) * orbitRy - dot * 0.5f, dot, dot);
     }
 
-    const float characterScale = 0.72f + intensityValue * 0.17f
-                               + breathe * (0.003f + intensityValue * 0.010f);
-    const float bob = pulse * (1.0f + intensityValue * 4.2f);
-    const float wingOpen = 0.91f + intensityValue * 0.15f + std::sin (animPhase * 1.3f) * 0.018f;
+    // Draw the angel pair upright, retaining the green embrace, blue body and
+    // their pink/charcoal wings from the supplied drawing.
+    const float characterScale = 0.79f + mood * 0.13f
+                               + breathe * (0.003f + mood * 0.011f);
+    const float bob = pulse * (1.0f + mood * 4.2f);
+    const float wingOpen = 0.83f + mood * 0.24f + std::sin (animPhase * 1.3f) * 0.014f;
     g.saveState();
     g.addTransform (juce::AffineTransform (characterScale, 0.0f, cx,
                                            0.0f, characterScale, cy + bob));
 
-    // Pale peach wing behind the green angel; it opens slightly with Intensity.
+    // Devil tail is an accent that fades in only near the top of Intensity.
+    juce::Path tail;
+    tail.startNewSubPath (-43.0f, 74.0f);
+    tail.cubicTo (-22.0f, 82.0f, -4.0f, 77.0f, -8.0f, 63.0f);
+    tail.cubicTo (-13.0f, 52.0f, 2.0f, 55.0f, 5.0f, 66.0f);
+    g.setColour (redGlow.withAlpha (devil * 0.95f));
+    g.strokePath (tail, juce::PathStrokeType (3.1f, juce::PathStrokeType::curved,
+                                              juce::PathStrokeType::rounded));
+    juce::Path tailSpade;
+    tailSpade.startNewSubPath (4.0f, 64.0f);
+    tailSpade.lineTo (13.0f, 66.0f);
+    tailSpade.lineTo (5.0f, 74.0f);
+    tailSpade.lineTo (-2.0f, 67.0f);
+    tailSpade.closeSubPath();
+    g.setColour (orange.withAlpha (devil * 0.95f));
+    g.fillPath (tailSpade);
+
+    // Peach wing opens as the angels become bolder.
     g.saveState();
     g.addTransform (juce::AffineTransform (wingOpen, 0.0f, -42.0f * (wingOpen - 1.0f),
                                            0.0f, 1.0f, 0.0f));
@@ -423,14 +506,14 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     peachFeathers.cubicTo (-68.0f, -1.0f, -78.0f, 12.0f, -65.0f, 23.0f);
     peachFeathers.startNewSubPath (-45.0f, 16.0f);
     peachFeathers.cubicTo (-58.0f, 10.0f, -67.0f, 27.0f, -54.0f, 31.0f);
-    g.setColour (rose.withAlpha (0.97f));
+    g.setColour (rose.withAlpha (0.96f));
     g.fillPath (peachWing);
-    g.setColour (cream.withAlpha (0.96f));
-    g.strokePath (peachFeathers, juce::PathStrokeType (4.0f, juce::PathStrokeType::curved,
+    g.setColour (cream.withAlpha (0.94f));
+    g.strokePath (peachFeathers, juce::PathStrokeType (3.8f, juce::PathStrokeType::curved,
                                                        juce::PathStrokeType::rounded));
     g.restoreState();
 
-    // The blue angel sits slightly behind: long body and softly pointed head.
+    // Tall blue figure, positioned behind the green angel.
     juce::Path blueBody;
     blueBody.startNewSubPath (10.0f, -55.0f);
     blueBody.cubicTo (-2.0f, -62.0f, -4.0f, -76.0f, 5.0f, -88.0f);
@@ -446,7 +529,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (blue);
     g.fillPath (blueBody);
 
-    // Charcoal wing on the blue angel's right shoulder; its spread follows Intensity.
+    // Charcoal feathers animate open with the same eased parameter.
     g.saveState();
     g.addTransform (juce::AffineTransform (wingOpen, 0.0f, 31.0f * (1.0f - wingOpen),
                                            0.0f, 1.0f, 0.0f));
@@ -467,20 +550,45 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
         darkFeathers.startNewSubPath (37.0f, yy);
         darkFeathers.cubicTo (54.0f, yy - 9.0f, 77.0f, yy + 2.0f, 91.0f, yy + 13.0f);
     }
-    g.setColour (cream.withAlpha (0.58f));
-    g.strokePath (darkFeathers, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
+    g.setColour (cream.withAlpha (0.57f));
+    g.strokePath (darkFeathers, juce::PathStrokeType (1.9f, juce::PathStrokeType::curved,
                                                       juce::PathStrokeType::rounded));
     g.setColour (cream.withAlpha (0.68f));
     g.drawEllipse (30.0f, -30.0f, 13.0f, 13.0f, 2.0f);
     g.restoreState();
 
-    // A small blue highlight and dot eye keep the original simple face language.
-    g.setColour (cream.withAlpha (0.28f));
-    g.drawLine (5.0f, -75.0f, 2.0f, -65.0f, 1.2f);
-    g.setColour (ink);
+    // Expression interpolation: tearful frown at minimum, grin and horns at maximum.
+    // Eyes remain tiny black dots to preserve the look of the hand-drawn characters.
+    g.setColour (faceInk);
     g.fillEllipse (16.0f, -80.0f, 4.7f, 4.7f);
+    g.setColour (cream.withAlpha (0.75f));
+    g.fillEllipse (17.0f, -79.0f, 1.15f, 1.15f);
 
-    // Green angel in front, wrapping its arm around the blue figure.
+    juce::Path blueMouth;
+    blueMouth.startNewSubPath (12.0f, -68.0f);
+    blueMouth.cubicTo (14.0f, -75.0f + mood * 13.0f,
+                       20.0f, -75.0f + mood * 13.0f, 22.0f, -68.0f);
+    g.setColour (faceInk);
+    g.strokePath (blueMouth, juce::PathStrokeType (2.4f, juce::PathStrokeType::curved,
+                                                  juce::PathStrokeType::rounded));
+
+    juce::Path blueBrow;
+    blueBrow.startNewSubPath (12.0f, -86.0f);
+    blueBrow.lineTo (21.0f, -85.0f + devil * 3.0f);
+    g.setColour (faceInk.withAlpha (0.84f));
+    g.strokePath (blueBrow, juce::PathStrokeType (1.6f, juce::PathStrokeType::curved,
+                                                  juce::PathStrokeType::rounded));
+
+    // A tear slides gently down the blue angel's cheek while Intensity is low.
+    juce::Path blueTear;
+    blueTear.startNewSubPath (18.0f, -71.0f + (1.0f - sad) * 4.0f);
+    blueTear.cubicTo (16.0f, -67.0f, 17.0f, -64.0f, 19.0f, -64.0f);
+    blueTear.cubicTo (22.0f, -64.0f, 22.0f, -68.0f, 18.0f, -71.0f + (1.0f - sad) * 4.0f);
+    blueTear.closeSubPath();
+    g.setColour (blue.brighter (0.23f).withAlpha (sad * 0.92f));
+    g.fillPath (blueTear);
+
+    // Green angel in front, reaching around its companion.
     juce::Path greenBody;
     greenBody.startNewSubPath (-42.0f, -13.0f);
     greenBody.cubicTo (-55.0f, -20.0f, -56.0f, -38.0f, -47.0f, -48.0f);
@@ -505,28 +613,84 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     embraceArm.closeSubPath();
     g.fillPath (embraceArm);
 
-    g.setColour (cream.withAlpha (0.26f));
     juce::Path greenHighlight;
     greenHighlight.startNewSubPath (-44.0f, -35.0f);
     greenHighlight.cubicTo (-48.0f, -23.0f, -44.0f, -12.0f, -41.0f, -2.0f);
+    g.setColour (cream.withAlpha (0.30f));
     g.strokePath (greenHighlight, juce::PathStrokeType (1.1f, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
-    g.setColour (ink);
-    g.fillEllipse (-39.0f, -39.0f, 4.2f, 4.2f);
 
-    // The tilted ice-blue halo above the green angel is always part of its identity.
+    g.setColour (faceInk);
+    g.fillEllipse (-39.0f, -39.0f, 4.2f, 4.2f);
+    g.setColour (cream.withAlpha (0.72f));
+    g.fillEllipse (-38.0f, -38.0f, 1.0f, 1.0f);
+
+    juce::Path greenMouth;
+    greenMouth.startNewSubPath (-44.0f, -27.0f);
+    greenMouth.cubicTo (-42.0f, -34.0f + mood * 12.0f,
+                        -36.0f, -34.0f + mood * 12.0f, -34.0f, -27.0f);
+    g.setColour (faceInk);
+    g.strokePath (greenMouth, juce::PathStrokeType (2.2f, juce::PathStrokeType::curved,
+                                                    juce::PathStrokeType::rounded));
+
+    juce::Path greenBrow;
+    greenBrow.startNewSubPath (-44.0f, -45.0f);
+    greenBrow.lineTo (-35.0f, -44.0f + devil * 3.0f);
+    g.setColour (faceInk.withAlpha (0.84f));
+    g.strokePath (greenBrow, juce::PathStrokeType (1.5f, juce::PathStrokeType::curved,
+                                                   juce::PathStrokeType::rounded));
+
+    juce::Path greenTear;
+    greenTear.startNewSubPath (-36.0f, -29.0f + (1.0f - sad) * 3.0f);
+    greenTear.cubicTo (-39.0f, -25.0f, -37.0f, -22.0f, -35.0f, -23.0f);
+    greenTear.cubicTo (-33.0f, -24.0f, -33.0f, -27.0f, -36.0f, -29.0f + (1.0f - sad) * 3.0f);
+    greenTear.closeSubPath();
+    g.setColour (blue.brighter (0.23f).withAlpha (sad * 0.90f));
+    g.fillPath (greenTear);
+
+    // The original halo slowly gives way to little devil horns near full Intensity.
     juce::Path halo;
     halo.addEllipse (-50.0f, -64.0f, 27.0f, 7.3f);
-    g.setColour (blue.withAlpha (0.86f));
-    g.strokePath (halo, juce::PathStrokeType (2.3f, juce::PathStrokeType::curved,
+    g.setColour (blue.withAlpha (0.90f * (1.0f - devil)));
+    g.strokePath (halo, juce::PathStrokeType (2.4f, juce::PathStrokeType::curved,
                                               juce::PathStrokeType::rounded));
-    g.setColour (cream.withAlpha (0.92f));
+    g.setColour (cream.withAlpha (0.92f * (1.0f - devil)));
     g.drawLine (-45.0f, -60.3f, -28.0f, -60.3f, 0.8f);
 
-    // Small mode-specific accessory: warm spark, Voltage lightning, or Somnium moon.
+    juce::Path blueHorns;
+    blueHorns.startNewSubPath (7.0f, -88.0f);
+    blueHorns.lineTo (1.0f, -103.0f);
+    blueHorns.lineTo (15.0f, -91.0f);
+    blueHorns.closeSubPath();
+    blueHorns.startNewSubPath (26.0f, -88.0f);
+    blueHorns.lineTo (36.0f, -103.0f);
+    blueHorns.lineTo (35.0f, -86.0f);
+    blueHorns.closeSubPath();
+
+    juce::Path greenHorns;
+    greenHorns.startNewSubPath (-46.0f, -48.0f);
+    greenHorns.lineTo (-54.0f, -61.0f);
+    greenHorns.lineTo (-41.0f, -51.0f);
+    greenHorns.closeSubPath();
+    greenHorns.startNewSubPath (-31.0f, -49.0f);
+    greenHorns.lineTo (-23.0f, -61.0f);
+    greenHorns.lineTo (-27.0f, -46.0f);
+    greenHorns.closeSubPath();
+
+    g.setColour (redGlow.withAlpha (devil * 0.22f));
+    g.strokePath (blueHorns, juce::PathStrokeType (6.0f));
+    g.strokePath (greenHorns, juce::PathStrokeType (6.0f));
+    g.setColour (orange.withAlpha (devil));
+    g.fillPath (blueHorns);
+    g.fillPath (greenHorns);
+    g.setColour (cream.withAlpha (devil * 0.82f));
+    g.drawLine (4.0f, -99.0f, 7.0f, -94.0f, 0.8f);
+    g.drawLine (32.0f, -99.0f, 32.0f, -92.0f, 0.8f);
+
+    // Keep each mode's signature accessory visible on top of the animation.
     if (visualMode == 0)
     {
-        g.setColour (orange.withAlpha (0.9f));
+        g.setColour (orange.withAlpha (0.94f));
         g.drawLine (57.0f, -96.0f, 57.0f, -84.0f, 1.8f);
         g.drawLine (51.0f, -90.0f, 63.0f, -90.0f, 1.8f);
         g.drawLine (53.0f, -94.0f, 61.0f, -86.0f, 1.0f);
@@ -573,26 +737,29 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     }
     g.restoreState();
 
+    // Mode and mood readouts sit under the artwork without competing with it.
     const juce::String modeName = visualMode == 0 ? "CLASSICUS"
                                 : visualMode == 1 ? "NOVUS" : "SOMNIUM";
-    const juce::String modeSubtitle = visualMode == 0 ? "SPRING  ·  WARMTH"
-                                   : visualMode == 1 ? "SAG  ·  VOLTAGE"
-                                   : "HALO  ·  DREAM";
-    g.setColour (ink.withAlpha (0.85f));
-    g.setFont (juce::Font (juce::FontOptions (10.2f, juce::Font::bold)));
-    g.drawText (modeName, 0, 361, getWidth(), 16, juce::Justification::centred);
-    g.setColour (ink.withAlpha (0.48f));
-    g.setFont (juce::Font (juce::FontOptions (8.4f)));
-    g.drawText (modeSubtitle, 0, 378, getWidth(), 14, juce::Justification::centred);
+    const juce::String modeSubtitle = visualMode == 0 ? "SPRING  /  WARMTH"
+                                   : visualMode == 1 ? "SAG  /  VOLTAGE"
+                                   : "HALO  /  DREAM";
+    g.setColour (cream.withAlpha (0.90f));
+    g.setFont (juce::Font (juce::FontOptions (10.0f, juce::Font::bold)));
+    g.drawText (modeName, juce::roundToInt (cx - 120.0f), 389, 240, 17,
+                juce::Justification::centred);
+    g.setColour (auraColour.withAlpha (0.80f));
+    g.setFont (juce::Font (juce::FontOptions (8.6f)));
+    g.drawText (modeSubtitle, juce::roundToInt (cx - 120.0f), 407, 240, 14,
+                juce::Justification::centred);
 
-    g.setColour (line);
-    g.drawLine (30.0f, static_cast<float> (getHeight() - 204), static_cast<float> (getWidth() - 30),
-                static_cast<float> (getHeight() - 204), 1.0f);
-    g.setColour (modeColour.withAlpha (0.8f));
-    g.fillEllipse (getWidth() - 48.0f, getHeight() - 32.0f, 7.0f, 7.0f);
-    g.setColour (ink.withAlpha (0.56f));
-    g.setFont (juce::Font (juce::FontOptions (8.5f)));
-    g.drawText ("DIFFERENT ANGELS. SAME DREAM.", 30, getHeight() - 31, 260, 14,
+    g.setColour (line.withAlpha (0.72f));
+    g.drawLine (30.0f, static_cast<float> (height - 195), static_cast<float> (width - 30),
+                static_cast<float> (height - 195), 0.8f);
+    g.setColour (auraColour.withAlpha (0.85f));
+    g.fillEllipse (width - 47.0f, height - 31.0f, 6.0f, 6.0f);
+    g.setColour (cream.withAlpha (0.52f));
+    g.setFont (juce::Font (juce::FontOptions (8.3f)));
+    g.drawText ("DIFFERENT ANGELS. SAME DREAM.", 30, height - 30, 260, 14,
                 juce::Justification::centredLeft);
 }
 
@@ -605,20 +772,21 @@ void FuturoSpringAudioProcessorEditor::resized()
     presetMenu.setBounds (width - 292, 66, 260, 27);
 
     const int left = 34;
-    classic.setBounds (left, 139, 116, 35);
-    flex.setBounds (left, 183, 116, 35);
-    dream.setBounds (left, 227, 116, 35);
-    inputGainLabel.setBounds (left, 278, 42, 14);
-    inputGain.setBounds (left, 292, 132, 24);
-    outputGainLabel.setBounds (left, 320, 42, 14);
-    outputGain.setBounds (left, 334, 132, 24);
-    fiuso.setBounds (juce::roundToInt (width * 0.575f) - 54, 398, 108, 28);
+    classic.setBounds (left, 151, 142, 35);
+    flex.setBounds (left, 196, 142, 35);
+    dream.setBounds (left, 241, 142, 35);
+    fiuso.setBounds (left, 286, 142, 32);
 
-    const float fractions[5] { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f };
+    inputGainLabel.setBounds (left + 2, 344, 42, 14);
+    inputGain.setBounds (left, 358, 142, 24);
+    outputGainLabel.setBounds (left + 2, 390, 42, 14);
+    outputGain.setBounds (left, 404, 142, 24);
+
+    const float fractions[5] { 0.16f, 0.34f, 0.54f, 0.74f, 0.89f };
     const int knobTop = height - 180;
-    const int standardWidth = 108;
+    const int standardWidth = 104;
     const int standardHeight = 126;
-    const int largeWidth = 144;
+    const int largeWidth = 146;
     const int largeHeight = 144;
 
     mix.setBounds (juce::roundToInt (width * fractions[0]) - standardWidth / 2,
@@ -628,7 +796,7 @@ void FuturoSpringAudioProcessorEditor::resized()
     intensity.setBounds (juce::roundToInt (width * fractions[2]) - largeWidth / 2,
                          knobTop - 1, largeWidth, largeHeight);
     character.setBounds (juce::roundToInt (width * fractions[3]) - standardWidth / 2,
-                     knobTop + 9, standardWidth, standardHeight);
+                         knobTop + 9, standardWidth, standardHeight);
     tone.setBounds (juce::roundToInt (width * fractions[4]) - standardWidth / 2,
                     knobTop + 9, standardWidth, standardHeight);
 }

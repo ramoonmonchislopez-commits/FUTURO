@@ -36,6 +36,7 @@ private:
     std::unique_ptr<ButtonAttachment> fiusoAtt;
     juce::ComboBox modeParam;
     float animPhase = 0.0f;
+    float animatedIntensity = 0.60f;
     int visualMode = 0;
 
     void styleKnob (juce::Slider&, const juce::String&);

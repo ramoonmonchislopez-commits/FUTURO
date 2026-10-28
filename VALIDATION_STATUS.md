@@ -3,7 +3,8 @@
 Status: engineering/test build; not a verified commercial release.
 
 Implemented in this branch:
-- Minimalist cream-and-pastel visual redesign; upright green-and-blue angel pair with hand-drawn feather wings, halo, mode-specific spark/lightning/moon accents, and Intensity-linked breathing/scale/orbit animation.
+- Retro-futurist dark glass panel, metallic/neon controls, and upright green-and-blue angel pair with hand-drawn feather wings, a halo, and mode-specific spark/lightning/moon accents.
+- Smoothed Intensity-to-mood animation: low settings add frowns and tears, high settings ease into smiling expressions, horns, a devil tail, warmer orbital accents and wider wings.
 - Editable factory preset menu with host parameter notifications and five more strongly contrasted voices.
 - The uninitialised plug-in opens on Copper Bloom's Classicus reference values; the default APVTS values and factory preset agree.
 - Perceptually shaped Character response, checked at intermediate settings in all three modes.
