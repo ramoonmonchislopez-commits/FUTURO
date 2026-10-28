@@ -16,6 +16,7 @@ public:
     void drawComboBox (juce::Graphics&, int width, int height, bool isButtonDown,
                        int buttonX, int buttonY, int buttonW, int buttonH,
                        juce::ComboBox&) override;
+    void drawLabel (juce::Graphics&, juce::Label&) override;
 };
 
 class FuturoSpringAudioProcessorEditor : public juce::AudioProcessorEditor,

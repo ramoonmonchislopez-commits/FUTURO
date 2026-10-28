@@ -255,6 +255,25 @@ void FuturoKnobLookAndFeel::drawComboBox (juce::Graphics& g, int width, int heig
                                                juce::PathStrokeType::rounded));
 }
 
+void FuturoKnobLookAndFeel::drawLabel (juce::Graphics& g, juce::Label& label)
+{
+    const auto bounds = label.getLocalBounds();
+    const auto colour = label.findColour (juce::Label::textColourId);
+    g.setFont (label.getFont());
+
+    // Slight offset pigment passes soften the edges like chalk rubbed into grain.
+    g.setColour (colour.withAlpha (0.13f));
+    g.drawFittedText (label.getText(), bounds.translated (0, 1),
+                      label.getJustificationType(), 1);
+    g.setColour (colour);
+    g.drawFittedText (label.getText(), bounds, label.getJustificationType(), 1);
+
+    juce::Path chalkField;
+    chalkField.addRectangle (bounds.toFloat());
+    drawChalkTexture (g, chalkField, colour, static_cast<std::uint32_t> (label.getText().hashCode()),
+                      34, 0.045f);
+}
+
 FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpringAudioProcessor& p)
     : AudioProcessorEditor (&p), processor (p)
 {
@@ -820,8 +839,8 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     juce::Path blueMouth;
     blueMouth.startNewSubPath (12.0f, -68.0f);
-    blueMouth.cubicTo (14.0f, -63.0f - mood * 12.0f,
-                       20.0f, -63.0f - mood * 12.0f, 22.0f, -68.0f);
+    blueMouth.cubicTo (14.0f, -63.0f - happy * 12.0f,
+                       20.0f, -63.0f - happy * 12.0f, 22.0f, -68.0f);
     g.setColour (faceInk);
     g.strokePath (blueMouth, juce::PathStrokeType (2.4f, juce::PathStrokeType::curved,
                                                   juce::PathStrokeType::rounded));
@@ -883,8 +902,8 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     juce::Path greenMouth;
     greenMouth.startNewSubPath (-44.0f, -27.0f);
-    greenMouth.cubicTo (-42.0f, -22.0f - mood * 12.0f,
-                        -36.0f, -22.0f - mood * 12.0f, -34.0f, -27.0f);
+    greenMouth.cubicTo (-42.0f, -22.0f - happy * 12.0f,
+                        -36.0f, -22.0f - happy * 12.0f, -34.0f, -27.0f);
     g.setColour (faceInk);
     g.strokePath (greenMouth, juce::PathStrokeType (2.2f, juce::PathStrokeType::curved,
                                                     juce::PathStrokeType::rounded));
