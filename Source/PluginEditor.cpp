@@ -104,6 +104,8 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     styleKnob (character, "SPRING");
     character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
+    styleFader (inputGain, "IN");
+    styleFader (outputGain, "OUT");
 
     classic.setButtonText ("CLASSICUS");
     flex.setButtonText ("NOVUS");
@@ -125,6 +127,14 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     flex.onClick    = [this] { setMode (1); };
     dream.onClick   = [this] { setMode (2); };
 
+    fiuso.setClickingTogglesState (true);
+    fiuso.setColour (juce::TextButton::buttonColourId, ink);
+    fiuso.setColour (juce::TextButton::buttonOnColourId, orange);
+    fiuso.setColour (juce::TextButton::textColourOffId, cream);
+    fiuso.setColour (juce::TextButton::textColourOnId, cream);
+    fiuso.setTooltip ("FIUSO adds an octave-up harmonic layer to the spring excitation; the direct path stays clean");
+    addAndMakeVisible (fiuso);
+
     modeParam.addItem ("Classicus", 1);
     modeParam.addItem ("Novus", 2);
     modeParam.addItem ("Somnium", 3);
@@ -136,6 +146,9 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     saturationAtt = std::make_unique<SliderAttachment> (p.parameters, "saturation", saturation);
     characterAtt      = std::make_unique<SliderAttachment> (p.parameters, "character", character);
     toneAtt       = std::make_unique<SliderAttachment> (p.parameters, "tone", tone);
+    inputGainAtt  = std::make_unique<SliderAttachment> (p.parameters, "inputGain", inputGain);
+    outputGainAtt = std::make_unique<SliderAttachment> (p.parameters, "outputGain", outputGain);
+    fiusoAtt      = std::make_unique<ButtonAttachment> (p.parameters, "fiuso", fiuso);
 
     setMode (static_cast<int> (p.parameters.getRawParameterValue ("mode")->load()));
     startTimerHz (24);
@@ -145,8 +158,22 @@ FuturoSpringAudioProcessorEditor::~FuturoSpringAudioProcessorEditor()
 {
     stopTimer();
     setLookAndFeel (nullptr);
-    for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
+    for (auto* slider : { &mix, &intensity, &saturation, &character, &tone, &inputGain, &outputGain })
         slider->setLookAndFeel (nullptr);
+}
+
+void FuturoSpringAudioProcessorEditor::styleFader (juce::Slider& slider, const juce::String& label)
+{
+    slider.setName (label);
+    slider.setSliderStyle (juce::Slider::LinearHorizontal);
+    slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 18);
+    slider.setLookAndFeel (&knobLookAndFeel);
+    slider.setColour (juce::Slider::trackColourId, teal);
+    slider.setColour (juce::Slider::thumbColourId, ink);
+    slider.setColour (juce::Slider::textBoxTextColourId, ink);
+    slider.setColour (juce::Slider::textBoxBackgroundColourId, paper.withAlpha (0.0f));
+    slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    addAndMakeVisible (slider);
 }
 
 void FuturoSpringAudioProcessorEditor::styleKnob (juce::Slider& slider, const juce::String& label)
@@ -177,16 +204,17 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
-    character.setName ("SPRING");
+    character.setName (visualMode == 0 ? "SPRING" : visualMode == 1 ? "SAG" : "HALO");
     character.setTooltip (visualMode == 0
-        ? "CLASSICUS: vintage spring colour and controlled harmonic drive; no pitch modulation"
+        ? "CLASSICUS: Spring — vintage spring colour and controlled harmonic drive; no pitch modulation"
         : visualMode == 1
-            ? "NOVUS: Voltage Sag, a controlled level dip with a slow recovery on the reverb return"
-            : "SOMNIUM: a dark, soft halo on the reverb return; fixed-time colour, no pitch modulation");
+            ? "NOVUS: Sag — Voltage Sag, a controlled level dip with a slow recovery on the reverb return"
+            : "SOMNIUM: Halo — a dark, soft halo on the reverb return; fixed-time colour, no pitch modulation");
 
     const auto accent = currentModeColour();
     for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
         slider->setColour (juce::Slider::rotarySliderFillColourId, accent);
+    fiuso.setColour (juce::TextButton::buttonOnColourId, accent);
     for (auto* button : { &classic, &flex, &dream })
         button->setColour (juce::TextButton::buttonOnColourId, accent);
     repaint();
@@ -357,6 +385,9 @@ void FuturoSpringAudioProcessorEditor::resized()
     classic.setBounds (left, 139, 116, 35);
     flex.setBounds (left, 183, 116, 35);
     dream.setBounds (left, 227, 116, 35);
+    inputGain.setBounds (left, 292, 126, 24);
+    outputGain.setBounds (left, 330, 126, 24);
+    fiuso.setBounds (juce::roundToInt (width * 0.56f) - 67, 389, 134, 34);
 
     const float fractions[5] { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f };
     const int knobTop = height - 180;
