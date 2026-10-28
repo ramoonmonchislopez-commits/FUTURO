@@ -75,19 +75,19 @@ FuturoSpringAudioProcessor::APVTS::ParameterLayout FuturoSpringAudioProcessor::c
 {
     APVTS::ParameterLayout p;
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "mix", 1 }, "Mix",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.25f));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.31f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "intensity", 1 }, "Intensity",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.55f));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.60f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "saturation", 1 }, "Drive",
-        juce::NormalisableRange<float> (0.0f, 18.0f, 0.1f), 2.0f));
+        juce::NormalisableRange<float> (0.0f, 18.0f, 0.1f), 3.8f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "character", 1 }, "Character",
-        juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 35.0f));
+        juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 62.0f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "tone", 1 }, "Tone / Damping",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.7f));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.54f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "inputGain", 1 }, "Input",
         juce::NormalisableRange<float> (-24.0f, 12.0f, 0.1f), 0.0f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "outputGain", 1 }, "Output",
-        juce::NormalisableRange<float> (-24.0f, 12.0f, 0.1f), 0.0f));
+        juce::NormalisableRange<float> (-24.0f, 12.0f, 0.1f), -0.5f));
     p.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { "fiuso", 1 }, "Fiuso", false));
     p.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "mode", 1 }, "Mode",
         juce::StringArray { "Classicus", "Novus", "Somnium" }, 0));
@@ -424,9 +424,11 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 }
                 else
                 {
-                    wetTailByMode[mode][channel] = saturateSomnium (tail, 1.7f + smoothSaturation * 0.85f);
+                    // The feedback loop keeps Somnium's signature; a gentler return stage prevents
+                    // dense resonances from sounding pinched or overdriven.
+                    wetTailByMode[mode][channel] = saturateSomnium (tail, 1.25f + smoothSaturation * 0.55f);
                     const float early = diffused * earlyGain;
-                    wetEarlyByMode[mode][channel] = saturateSomnium (early, 1.2f + smoothSaturation * 0.50f);
+                    wetEarlyByMode[mode][channel] = saturateSomnium (early, 0.95f + smoothSaturation * 0.32f);
                 }
             }
         }
@@ -487,8 +489,8 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             halo += haloAlpha * (wetBase[channel] - halo);
             float somnium = wetBase[channel] * (1.0f - 0.40f * characterCurve)
                           + halo * (0.72f * characterCurve);
-            somnium = saturateSomnium (somnium, 1.6f + smoothSaturation * 0.85f
-                                                   + 4.0f * characterDepth);
+            somnium = saturateSomnium (somnium, 1.10f + smoothSaturation * 0.55f
+                                                   + 2.8f * characterDepth);
 
             wet[channel] = classicus * modeWeights[0]
                          + novus * modeWeights[1]

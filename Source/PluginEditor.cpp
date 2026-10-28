@@ -96,13 +96,13 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     subheading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (subheading);
 
-    presetMenu.addItem ("Vintage Bloom", 1);
+    presetMenu.addItem ("Copper Bloom", 1);
     presetMenu.addItem ("Studio Coil", 2);
-    presetMenu.addItem ("Voltage Sag", 3);
-    presetMenu.addItem ("Dark Halo", 4);
-    presetMenu.addItem ("Fiuso Temple", 5);
+    presetMenu.addItem ("Voltage Kiss", 3);
+    presetMenu.addItem ("Lunar Halo", 4);
+    presetMenu.addItem ("Temple Bloom", 5);
     presetMenu.setTextWhenNothingSelected ("FACTORY PRESETS");
-    presetMenu.setTooltip ("Apply a factory starting point. All parameters remain editable and can be saved with the DAW project.");
+    presetMenu.setTooltip ("Five contrasted factory voices: Copper Bloom, Studio Coil, Voltage Kiss, Lunar Halo, and Temple Bloom. All controls remain editable.");
     presetMenu.setColour (juce::ComboBox::backgroundColourId, cream);
     presetMenu.setColour (juce::ComboBox::textColourId, ink);
     presetMenu.setColour (juce::ComboBox::outlineColourId, ink.withAlpha (0.45f));
@@ -268,63 +268,63 @@ void FuturoSpringAudioProcessorEditor::applyPreset (int presetId)
 
     switch (presetId)
     {
-        case 1: // Vintage Bloom — rounded, warm spring body.
+        case 1: // Copper Bloom — the default Classicus reference voice.
             setParameter ("mode", 0.0f);
-            setParameter ("mix", 0.32f);
-            setParameter ("intensity", 0.62f);
-            setParameter ("saturation", 5.0f);
-            setParameter ("character", 65.0f);
-            setParameter ("tone", 0.56f);
-            setParameter ("inputGain", 0.0f);
-            setParameter ("outputGain", -1.0f);
-            setParameter ("fiuso", 0.0f);
-            break;
-
-        case 2: // Studio Coil — short, restrained spring for inserts.
-            setParameter ("mode", 0.0f);
-            setParameter ("mix", 0.19f);
-            setParameter ("intensity", 0.34f);
-            setParameter ("saturation", 2.5f);
-            setParameter ("character", 38.0f);
-            setParameter ("tone", 0.78f);
+            setParameter ("mix", 0.31f);
+            setParameter ("intensity", 0.60f);
+            setParameter ("saturation", 3.8f);
+            setParameter ("character", 62.0f);
+            setParameter ("tone", 0.54f);
             setParameter ("inputGain", 0.0f);
             setParameter ("outputGain", -0.5f);
             setParameter ("fiuso", 0.0f);
             break;
 
-        case 3: // Voltage Sag — more dynamic compression and movement.
-            setParameter ("mode", 1.0f);
-            setParameter ("mix", 0.42f);
-            setParameter ("intensity", 0.72f);
-            setParameter ("saturation", 7.5f);
-            setParameter ("character", 68.0f);
-            setParameter ("tone", 0.72f);
-            setParameter ("inputGain", -2.0f);
-            setParameter ("outputGain", -1.5f);
+        case 2: // Studio Coil — short, clean spring that sits behind the source.
+            setParameter ("mode", 0.0f);
+            setParameter ("mix", 0.17f);
+            setParameter ("intensity", 0.27f);
+            setParameter ("saturation", 1.1f);
+            setParameter ("character", 22.0f);
+            setParameter ("tone", 0.82f);
+            setParameter ("inputGain", 0.0f);
+            setParameter ("outputGain", 0.0f);
             setParameter ("fiuso", 0.0f);
             break;
 
-        case 4: // Dark Halo — soft, dense, darker wet field.
+        case 3: // Voltage Kiss — pronounced sag, upper-mid bite and lively return.
+            setParameter ("mode", 1.0f);
+            setParameter ("mix", 0.36f);
+            setParameter ("intensity", 0.66f);
+            setParameter ("saturation", 5.3f);
+            setParameter ("character", 80.0f);
+            setParameter ("tone", 0.74f);
+            setParameter ("inputGain", -1.5f);
+            setParameter ("outputGain", -1.0f);
+            setParameter ("fiuso", 0.0f);
+            break;
+
+        case 4: // Lunar Halo — dark, spacious and deliberately low on Drive.
+            setParameter ("mode", 2.0f);
+            setParameter ("mix", 0.39f);
+            setParameter ("intensity", 0.70f);
+            setParameter ("saturation", 2.4f);
+            setParameter ("character", 56.0f);
+            setParameter ("tone", 0.22f);
+            setParameter ("inputGain", -1.5f);
+            setParameter ("outputGain", -1.0f);
+            setParameter ("fiuso", 0.0f);
+            break;
+
+        case 5: // Temple Bloom — harmonic shimmer with Fiūso, but controlled Drive.
             setParameter ("mode", 2.0f);
             setParameter ("mix", 0.48f);
-            setParameter ("intensity", 0.78f);
-            setParameter ("saturation", 5.5f);
-            setParameter ("character", 82.0f);
-            setParameter ("tone", 0.28f);
-            setParameter ("inputGain", -1.0f);
+            setParameter ("intensity", 0.76f);
+            setParameter ("saturation", 4.2f);
+            setParameter ("character", 72.0f);
+            setParameter ("tone", 0.44f);
+            setParameter ("inputGain", -2.0f);
             setParameter ("outputGain", -2.0f);
-            setParameter ("fiuso", 0.0f);
-            break;
-
-        case 5: // Fiuso Temple — dense harmonic colour routed only into the wet excitation.
-            setParameter ("mode", 2.0f);
-            setParameter ("mix", 0.54f);
-            setParameter ("intensity", 0.82f);
-            setParameter ("saturation", 6.5f);
-            setParameter ("character", 74.0f);
-            setParameter ("tone", 0.43f);
-            setParameter ("inputGain", -3.0f);
-            setParameter ("outputGain", -2.5f);
             setParameter ("fiuso", 1.0f);
             break;
 
