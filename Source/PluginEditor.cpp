@@ -102,7 +102,11 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     {
         const int selectedPreset = presetMenu.getSelectedId();
         if (selectedPreset > 0)
+        {
+            const auto selectedName = presetMenu.getText();
             applyPreset (selectedPreset);
+            presetMenu.setTextWhenNothingSelected (selectedName);
+        }
         presetMenu.setSelectedId (0, juce::dontSendNotification);
     };
     addAndMakeVisible (presetMenu);
@@ -237,6 +241,8 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
         slider->setColour (juce::Slider::rotarySliderFillColourId, accent);
     fiuso.setColour (juce::TextButton::buttonOnColourId, accent);
+    for (auto* slider : { &inputGain, &outputGain })
+        slider->setColour (juce::Slider::thumbColourId, accent);
     for (auto* button : { &classic, &flex, &dream })
         button->setColour (juce::TextButton::buttonOnColourId, accent);
     repaint();
@@ -400,7 +406,10 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.addTransform (juce::AffineTransform (characterScale, 0.0f, cx,
                                            0.0f, characterScale, cy + bob));
 
-    // Pale peach wing behind the green angel.
+    // Pale peach wing behind the green angel; it opens slightly with Intensity.
+    g.saveState();
+    g.addTransform (juce::AffineTransform (wingOpen, 0.0f, -42.0f * (wingOpen - 1.0f),
+                                           0.0f, 1.0f, 0.0f));
     juce::Path peachWing;
     peachWing.startNewSubPath (-42.0f, -5.0f);
     peachWing.cubicTo (-64.0f, -22.0f, -91.0f, -10.0f, -91.0f, 11.0f);
@@ -419,6 +428,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (cream.withAlpha (0.96f));
     g.strokePath (peachFeathers, juce::PathStrokeType (4.0f, juce::PathStrokeType::curved,
                                                        juce::PathStrokeType::rounded));
+    g.restoreState();
 
     // The blue angel sits slightly behind: long body and softly pointed head.
     juce::Path blueBody;
@@ -436,7 +446,10 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (blue);
     g.fillPath (blueBody);
 
-    // Charcoal wing on the blue angel's right shoulder, with hand-drawn feather ribs.
+    // Charcoal wing on the blue angel's right shoulder; its spread follows Intensity.
+    g.saveState();
+    g.addTransform (juce::AffineTransform (wingOpen, 0.0f, 31.0f * (1.0f - wingOpen),
+                                           0.0f, 1.0f, 0.0f));
     juce::Path darkWing;
     darkWing.startNewSubPath (29.0f, -33.0f);
     darkWing.cubicTo (44.0f, -57.0f, 70.0f, -57.0f, 87.0f, -42.0f);
@@ -459,6 +472,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
                                                       juce::PathStrokeType::rounded));
     g.setColour (cream.withAlpha (0.68f));
     g.drawEllipse (30.0f, -30.0f, 13.0f, 13.0f, 2.0f);
+    g.restoreState();
 
     // A small blue highlight and dot eye keep the original simple face language.
     g.setColour (cream.withAlpha (0.28f));
