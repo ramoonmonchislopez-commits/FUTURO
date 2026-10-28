@@ -3,10 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$ROOT/build-macos"
-ARCHS="arm64;x86_64"
-ARCH_LABEL="universal"
 DEPLOYMENT_TARGET="11.0"
-VERSION="0.12.1"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "ERROR: this script must run on macOS." >&2
@@ -21,12 +18,34 @@ if ! xcode-select -p >/dev/null 2>&1; then
   exit 2
 fi
 
+# Build natively to avoid requiring a second architecture's toolchain.
+ARCH="$(uname -m)"
+case "$ARCH" in
+  arm64|x86_64) ;;
+  *)
+    echo "ERROR: unsupported Mac architecture: $ARCH" >&2
+    exit 2
+    ;;
+esac
+
+VERSION="$(sed -n 's/^project(SPIRITUS_SPRING VERSION \([0-9.]*\).*/\1/p' "$ROOT/CMakeLists.txt")"
+if [[ -z "$VERSION" ]]; then
+  echo "ERROR: could not read project version from CMakeLists.txt." >&2
+  exit 2
+fi
+
 cmake --version
 cmake -S "$ROOT" -B "$BUILD_DIR" \
   -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_OSX_ARCHITECTURES="$ARCHS" \
+  -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
-cmake --build "$BUILD_DIR" --config Release --parallel "$(sysctl -n hw.ncpu)"
+
+cmake --build "$BUILD_DIR" --config Release \
+  --target FUTURO_SPRING_AU FUTURO_SPRING_VST3 FUTURO_DSP_SMOKE_TEST \
+  --parallel "$(sysctl -n hw.ncpu)"
+
+echo "Running FUTURO DSP regression tests..."
+"$BUILD_DIR/FUTURO_DSP_SMOKE_TEST"
 
 VST3_PATH="$(find "$BUILD_DIR" -type d -name 'Spiritus Spring Reverb.vst3' -print -quit)"
 AU_PATH="$(find "$BUILD_DIR" -type d -name 'Spiritus Spring Reverb.component' -print -quit)"
@@ -39,20 +58,18 @@ if [[ -z "$AU_PATH" || ! -d "$AU_PATH" ]]; then
   exit 3
 fi
 
-# JUCE's VST3 manifest helper may write moduleinfo.json after the initial link/sign pass.
-# Re-sign after all bundle resources have been generated so the resource seal is current.
+# Re-sign after JUCE has generated all bundle resources.
 codesign --force --deep --sign - "$VST3_PATH"
 codesign --force --deep --sign - "$AU_PATH"
 codesign --verify --deep --strict --verbose=2 "$VST3_PATH"
 codesign --verify --deep --strict --verbose=2 "$AU_PATH"
 
-# Assert that both architectures are actually present before packaging.
 VST3_BINARY="$VST3_PATH/Contents/MacOS/Spiritus Spring Reverb"
 AU_BINARY="$AU_PATH/Contents/MacOS/Spiritus Spring Reverb"
 for binary in "$VST3_BINARY" "$AU_BINARY"; do
   [[ -f "$binary" ]] || { echo "ERROR: missing binary: $binary" >&2; exit 3; }
   file "$binary"
-  lipo "$binary" -verify_arch arm64 x86_64
+  lipo "$binary" -verify_arch "$ARCH"
 done
 
 PKGROOT="$ROOT/dist/pkgroot"
@@ -63,21 +80,24 @@ cp -R "$VST3_PATH" "$PKGROOT/Library/Audio/Plug-Ins/VST3/"
 cp -R "$AU_PATH" "$PKGROOT/Library/Audio/Plug-Ins/Components/"
 
 mkdir -p "$ROOT/dist"
-PKG="$ROOT/dist/Spiritus-Spring-Reverb-$VERSION-$ARCH_LABEL.pkg"
-rm -f "$PKG"
+ARCH_LABEL="$ARCH"
+PKG="$ROOT/dist/Spiritus-Spring-Reverb-$VERSION-macOS-$ARCH_LABEL.pkg"
+rm -f "$PKG" "$PKG.sha256"
 pkgbuild \
   --root "$PKGROOT" \
-  --identifier "audio.spiritus.springreverb.pkg" \
+  --identifier "audio.spiritus.springreverb" \
   --version "$VERSION" \
   --install-location / \
   --ownership recommended \
   "$PKG"
 
-pkgutil --check-signature "$PKG" || true
 pkgutil --payload-files "$PKG" | grep -E 'Audio/Plug-Ins/(VST3|Components)/Spiritus Spring Reverb' >/dev/null || {
   echo "ERROR: installer payload does not contain the expected plug-in bundles." >&2
   exit 4
 }
+shasum -a 256 "$PKG" > "$PKG.sha256"
 
-echo "Build and package completed: $PKG"
-echo "WARNING: local test installer is unsigned and not notarized. A successful build is not proof of sound quality; test in the target DAW."
+echo "Build, DSP tests, and packaging completed:"
+echo "  $PKG"
+echo "  $PKG.sha256"
+echo "WARNING: this local test installer is unsigned and not notarized. Test it in the target DAW."
