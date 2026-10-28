@@ -259,7 +259,11 @@ void FuturoSpringAudioProcessorEditor::applyPreset (int presetId)
     const auto setParameter = [this] (const juce::String& parameterID, float value)
     {
         if (auto* parameter = processor.parameters.getParameter (parameterID))
+        {
+            parameter->beginChangeGesture();
             parameter->setValueNotifyingHost (parameter->convertTo0to1 (value));
+            parameter->endChangeGesture();
+        }
     };
 
     switch (presetId)
@@ -312,7 +316,7 @@ void FuturoSpringAudioProcessorEditor::applyPreset (int presetId)
             setParameter ("fiuso", 0.0f);
             break;
 
-        case 5: // Fi us o — dense harmonic colour routed only into the wet excitation.
+        case 5: // Fiuso Temple — dense harmonic colour routed only into the wet excitation.
             setParameter ("mode", 2.0f);
             setParameter ("mix", 0.54f);
             setParameter ("intensity", 0.82f);
