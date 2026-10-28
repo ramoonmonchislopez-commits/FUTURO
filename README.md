@@ -8,6 +8,8 @@ Version 0.13.0 is an engineering build targeting JUCE 9.0.4. The local macOS bui
 
 The three modes are **Classicus / Spring** (rounded, zero-centred vintage drive), **Novus / Sag** (power-stage compression plus Voltage Sag: amplitude dip and recovery), and **Somnium / Halo** (soft peak rounding with a dark, wet-field halo). Drive uses a different smooth, bounded saturation curve per mode and remains wet-only. The mode-dependent Character control is explicitly labelled Spring, Sag, or Halo. The small **IN** and **OUT** faders provide smoothed input/output trim. The central **Fiuso** button adds a DC-blocked octave-up harmonic series and related even harmonics to the spring excitation; the on/off state is smoothed and the dry path stays free of the generated layer. Mode-specific colours are crossfaded continuously; the dry path is not pitch-modulated or time-shifted. Intensity controls decay and wet presence, while Tone shapes the wet return.
 
+A **FACTORY PRESETS** menu provides five editable starting points: Vintage Bloom, Studio Coil, Voltage Sag, Dark Halo, and Fiuso Temple. Choosing a preset applies values through the host parameter API; you can then tweak any control and save the result with the DAW project.
+
 ## Build and test locally on macOS
 
 Requirements:
