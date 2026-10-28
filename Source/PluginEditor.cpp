@@ -214,7 +214,7 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
-    character.setName (visualMode == 0 ? "SPRING" : visualMode == 1 ? "SAG" : "HALO");
+    character.setName (visualMode == 0 ? "Spring" : visualMode == 1 ? "Sag" : "Halo");
     character.setTooltip (visualMode == 0
         ? "CLASSICUS: Spring — vintage spring colour and controlled harmonic drive; no pitch modulation"
         : visualMode == 1
