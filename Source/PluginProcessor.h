@@ -61,6 +61,9 @@ private:
     std::array<float, maxChannels> dampingState {};
     std::array<float, maxChannels> wetPresenceLowpassState {};
     std::array<float, maxChannels> wetBodyLowpassState {};
+    // Fiuso's fixed-time harmonic generator has its own state and never changes dry timing.
+    std::array<float, maxChannels> fiusoInputLowpassState {};
+    std::array<float, maxChannels> fiusoDcState {};
     std::array<float, maxChannels> previousInput {};
 
     std::array<float, maxChannels> characterLowpassState {};
@@ -82,6 +85,9 @@ private:
     float smoothCharacter = 0.35f;
     float smoothTone = 0.7f;
     float smoothMode = 0.0f;
+    float smoothInputGain = 1.0f;
+    float smoothOutputGain = 1.0f;
+    float smoothFiuso = 0.0f;
     float parameterSmoothing = 0.002f;
 
     float processDiffuser (int channel, int mode, float input, float coefficient) noexcept;
