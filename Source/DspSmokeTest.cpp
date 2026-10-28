@@ -165,6 +165,34 @@ namespace
 
 int main()
 {
+    // Protect the out-of-box Classicus reference voice from drifting away from
+    // the matching Copper Bloom factory preset.
+    {
+        FuturoSpringAudioProcessor defaults;
+        const auto value = [&defaults] (const char* id)
+        {
+            if (auto* raw = defaults.parameters.getRawParameterValue (id))
+                return raw->load();
+            return std::numeric_limits<float>::quiet_NaN();
+        };
+        const bool matchesCopperBloom =
+            std::abs (value ("mode") - 0.0f) < 0.001f
+            && std::abs (value ("mix") - 0.31f) < 0.01f
+            && std::abs (value ("intensity") - 0.60f) < 0.01f
+            && std::abs (value ("saturation") - 3.8f) < 0.05f
+            && std::abs (value ("character") - 62.0f) < 0.1f
+            && std::abs (value ("tone") - 0.54f) < 0.01f
+            && std::abs (value ("inputGain") - 0.0f) < 0.01f
+            && std::abs (value ("outputGain") + 0.5f) < 0.01f
+            && std::abs (value ("fiuso") - 0.0f) < 0.001f;
+        if (! matchesCopperBloom)
+        {
+            std::cerr << "FAIL: initial parameter state no longer matches Copper Bloom reference voice\n";
+            return 21;
+        }
+        std::cout << "PASS: initial Classicus voice matches Copper Bloom factory reference\n";
+    }
+
     std::array<RenderResult, 3> renders;
     for (int mode = 0; mode < 3; ++mode)
     {
