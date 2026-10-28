@@ -265,11 +265,11 @@ int main()
             std::cerr << "FAIL: stressed wet feedback unstable in mode " << mode
                       << "; finite=" << stressed.finite
                       << " peak=" << stressed.peak
-                      << " latePeak=" << stressed.latePeak << "\\n";
+                      << " latePeak=" << stressed.latePeak << "\n";
             return 14;
         }
         std::cout << "PASS: mode " << mode << " stressed wet feedback peak="
-                  << stressed.peak << " latePeak=" << stressed.latePeak << "\\n";
+                  << stressed.peak << " latePeak=" << stressed.latePeak << "\n";
     }
 
     // FIUSO must add a measurable harmonic layer to the wet spring, without instability.
