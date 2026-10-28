@@ -26,12 +26,17 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f, float mix = 1.0f, float saturation = 0.0f)
+    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f,
+                                float inputLevel = 1.0f, float mix = 1.0f, float saturation = 0.0f,
+                                float fiuso = 0.0f, float inputDb = 0.0f, float outputDb = 0.0f)
     {
         FuturoSpringAudioProcessor processor;
         setParameter (processor, "mix", mix);
         setParameter (processor, "intensity", intensity);
         setParameter (processor, "saturation", saturation);
+        setParameter (processor, "fiuso", fiuso);
+        setParameter (processor, "input", inputDb);
+        setParameter (processor, "output", outputDb);
         setParameter (processor, "character", character);
         setParameter (processor, "tone", tone);
         setParameter (processor, "mode", static_cast<float> (mode));
@@ -253,6 +258,29 @@ int main()
         }
         std::cout << "PASS: mode " << mode << " DRIVE difference=" << driveDifference
                   << " peak=" << pushedDrive.peak << " latePeak=" << pushedDrive.latePeak << "\n";
+    }
+
+    // Fiuso must add a measurable harmonic layer even with reverb Mix at zero, while staying finite.
+    {
+        const auto plain = renderImpulse (0, 25.0f, 0.65f, 0.8f, 0.45f, 0.0f, 0.0f, 0.0f);
+        const auto textured = renderImpulse (0, 25.0f, 0.65f, 0.8f, 0.45f, 0.0f, 0.0f, 1.0f);
+        double differenceEnergy = 0.0;
+        double referenceEnergy = 0.0;
+        for (size_t i = 0; i < plain.samples.size(); ++i)
+        {
+            const double a = plain.samples[i], b = textured.samples[i], d = a - b;
+            differenceEnergy += d * d;
+            referenceEnergy += a * a + b * b;
+        }
+        const double difference = std::sqrt (differenceEnergy / juce::jmax (1.0e-20, referenceEnergy));
+        if (! textured.finite || textured.peak > 0.985f || difference < 0.0001)
+        {
+            std::cerr << "FAIL: Fiuso did not produce a safe, measurable harmonic layer; difference="
+                      << difference << " peak=" << textured.peak << "\n";
+            return 12;
+        }
+        std::cout << "PASS: Fiuso harmonic layer difference=" << difference
+                  << " peak=" << textured.peak << "\n";
     }
 
     // A hot input must remain below digital full scale without using saturation.
