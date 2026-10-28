@@ -514,6 +514,59 @@ int main()
         processor.releaseResources();
     }
 
+    // Automated parameter sweeps and mode changes must stay finite and bounded.
+    {
+        FuturoSpringAudioProcessor processor;
+        setParameter (processor, "mix", 1.0f);
+        setParameter (processor, "intensity", 0.8f);
+        setParameter (processor, "saturation", 8.0f);
+        processor.prepareToPlay (testRate, blockSize);
+
+        juce::AudioBuffer<float> buffer (2, blockSize);
+        juce::MidiBuffer midi;
+        bool finite = true;
+        float peak = 0.0f;
+        constexpr std::array<float, 5> characterSteps { 0.0f, 25.0f, 50.0f, 75.0f, 100.0f };
+        constexpr int sweepBlocks = 240;
+        for (int block = 0; block < sweepBlocks; ++block)
+        {
+            const int step = (block / 12) % static_cast<int> (characterSteps.size());
+            const float characterValue = (block / 60) % 2 == 0
+                ? characterSteps[static_cast<size_t> (step)]
+                : characterSteps[static_cast<size_t> (4 - step)];
+            const int mode = (block / 30) % 3;
+            setParameter (processor, "character", characterValue);
+            setParameter (processor, "tone", static_cast<float> ((block / 6) % 11) / 10.0f);
+            setParameter (processor, "mode", static_cast<float> (mode));
+            setParameter (processor, "fiuso", (block / 15) % 2 == 0 ? 1.0f : 0.0f);
+
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float sample = 0.18f * std::sin (juce::MathConstants<float>::twoPi
+                    * 173.0f * static_cast<float> (block * blockSize + i) / static_cast<float> (testRate));
+                buffer.setSample (0, i, sample);
+                buffer.setSample (1, i, sample * 0.91f);
+            }
+            processor.processBlock (buffer, midi);
+            for (int channel = 0; channel < 2; ++channel)
+                for (int i = 0; i < blockSize; ++i)
+                {
+                    const float sample = buffer.getSample (channel, i);
+                    finite = finite && std::isfinite (sample);
+                    peak = juce::jmax (peak, std::abs (sample));
+                }
+        }
+        if (! finite || peak > 0.985f)
+        {
+            std::cerr << "FAIL: parameter automation/mode changes caused invalid or excessive output; peak="
+                      << peak << "\\n";
+            return 18;
+        }
+        std::cout << "PASS: Character/Tone/Mode/Fiuso automation finite and bounded; peak="
+                  << peak << "\\n";
+        processor.releaseResources();
+    }
+
     std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes, dry pitch lock, FIUSO harmonic layer.\n";
     return 0;
 }
