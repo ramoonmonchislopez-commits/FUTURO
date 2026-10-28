@@ -69,6 +69,65 @@ namespace
         processor.releaseResources();
         return result;
     }
+
+    bool dryToneFrequencyStable (int mode, float frequency)
+    {
+        FuturoSpringAudioProcessor processor;
+        setParameter (processor, "mix", 0.0f);
+        setParameter (processor, "intensity", 0.7f);
+        setParameter (processor, "saturation", 0.0f);
+        setParameter (processor, "character", 100.0f);
+        setParameter (processor, "tone", 1.0f);
+        setParameter (processor, "mode", static_cast<float> (mode));
+        processor.prepareToPlay (testRate, blockSize);
+
+        juce::AudioBuffer<float> buffer (2, blockSize);
+        juce::MidiBuffer midi;
+        const int totalSamples = static_cast<int> (testRate);
+        double firstCrossing = -1.0;
+        double lastCrossing = -1.0;
+        int crossings = 0;
+        float previous = 0.0f;
+
+        for (int offset = 0; offset < totalSamples; offset += blockSize)
+        {
+            const int count = juce::jmin (blockSize, totalSamples - offset);
+            for (int i = 0; i < count; ++i)
+            {
+                const int sampleIndex = offset + i;
+                const float input = 0.25f * std::sin (juce::MathConstants<float>::twoPi
+                    * frequency * static_cast<float> (sampleIndex) / static_cast<float> (testRate));
+                buffer.setSample (0, i, input);
+                buffer.setSample (1, i, input);
+            }
+            processor.processBlock (buffer, midi);
+            for (int i = 0; i < count; ++i)
+            {
+                const int sampleIndex = offset + i;
+                const float current = 0.5f * (buffer.getSample (0, i) + buffer.getSample (1, i));
+                if (sampleIndex > static_cast<int> (0.10 * testRate)
+                    && sampleIndex < static_cast<int> (0.90 * testRate)
+                    && previous <= 0.0f && current > 0.0f)
+                {
+                    const double fraction = -static_cast<double> (previous)
+                        / static_cast<double> (current - previous);
+                    const double crossing = static_cast<double> (sampleIndex - 1) + fraction;
+                    if (crossings == 0) firstCrossing = crossing;
+                    lastCrossing = crossing;
+                    ++crossings;
+                }
+                previous = current;
+            }
+        }
+        processor.releaseResources();
+        if (crossings < 10 || lastCrossing <= firstCrossing) return false;
+        const double measured = static_cast<double> (crossings - 1) * testRate / (lastCrossing - firstCrossing);
+        const double error = std::abs (measured - static_cast<double> (frequency));
+        std::cout << "PASS: mode " << mode << " dry pitch-lock " << measured
+                  << " Hz (error " << error << " Hz)\n";
+        return error < 0.25;
+    }
+
 }
 
 int main()
@@ -180,6 +239,13 @@ int main()
         std::cout << "PASS: mode " << mode << " clean output ceiling=" << hot.peak << "\n";
     }
 
-    std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes.\n";
+    for (int mode = 0; mode < 3; ++mode)
+        if (! dryToneFrequencyStable (mode, 997.0f))
+        {
+            std::cerr << "FAIL: mode " << mode << " altered direct-path pitch at high CHARACTER.\n";
+            return 8;
+        }
+
+    std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes, dry pitch lock.\n";
     return 0;
 }
