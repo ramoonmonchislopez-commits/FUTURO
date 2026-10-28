@@ -1,10 +1,12 @@
-# FUTURO 0.14.0 validation status
+# SPIRITUS 0.14.0 validation status
 
 Status: engineering/test build; not a verified commercial release.
 
 Implemented in this branch:
-- Retro-futurist dark glass panel, metallic/neon controls, and upright green-and-blue angel pair with hand-drawn feather wings, a halo, and mode-specific spark/lightning/moon accents.
-- Smoothed Intensity-to-mood animation: low settings add frowns and tears, high settings ease into smiling expressions, horns, a devil tail, warmer orbital accents and wider wings.
+- Worn chalkboard-metal interface with deterministic chalk/pastel grain across the panel, rotary dials, and angel shapes; aged screw heads and scratched metallic bevels.
+- Corrected display name to SPIRITUS and kept the three audio modes only: CLASSICUS, NOVUS and SOMNIUM.
+- Smoothed Intensity-to-mood animation: low settings use gentler sad faces and tears; high settings ease into mischievous smiles, refined horns and devil tail, warmer orbital accents and wider wings.
+- NOVUS uses marked bat wings; SOMNIUM has an astronaut helmet with a translucent visor and oxygen hose; CLASSICUS retains a copper spark and halo.
 - Editable factory preset menu with host parameter notifications and five more strongly contrasted voices.
 - The uninitialised plug-in opens on Copper Bloom's Classicus reference values; the default APVTS values and factory preset agree.
 - Perceptually shaped Character response, checked at intermediate settings in all three modes.

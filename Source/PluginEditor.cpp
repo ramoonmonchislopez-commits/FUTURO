@@ -1,27 +1,114 @@
 #include "PluginEditor.h"
 
 #include <cmath>
+#include <cstdint>
 
 namespace
 {
-    const juce::Colour paper    { 0xff151a25 };
-    const juce::Colour ink      { 0xfff4ecdf };
-    const juce::Colour orange   { 0xffffb08f };
-    const juce::Colour teal     { 0xff67d4cc };
-    const juce::Colour blue     { 0xff70c3ff };
-    const juce::Colour violet   { 0xffce9bff };
-    const juce::Colour cream    { 0xfffbf3e6 };
-    const juce::Colour line     { 0xff4c586a };
-    const juce::Colour green    { 0xff83d779 };
-    const juce::Colour rose     { 0xffffb8a8 };
-    const juce::Colour charcoal { 0xff343743 };
-    const juce::Colour surface  { 0xff242b39 };
-    const juce::Colour faceInk  { 0xff18212d };
-    const juce::Colour redGlow  { 0xffff776e };
+    const juce::Colour paper    { 0xff17130f };
+    const juce::Colour ink      { 0xffead7b4 };
+    const juce::Colour orange   { 0xffdca36f };
+    const juce::Colour teal     { 0xff7899a0 };
+    const juce::Colour blue     { 0xff86b9d5 };
+    const juce::Colour violet   { 0xffb19ab0 };
+    const juce::Colour cream    { 0xffead8b8 };
+    const juce::Colour line     { 0xff6d5948 };
+    const juce::Colour green    { 0xff7fa174 };
+    const juce::Colour rose     { 0xffd59c8e };
+    const juce::Colour charcoal { 0xff393238 };
+    const juce::Colour surface  { 0xff29221d };
+    const juce::Colour faceInk  { 0xff211b19 };
+    const juce::Colour redGlow  { 0xffd16f63 };
+    const juce::Colour demonWing { 0xff542d37 };
+    const juce::Colour chalkHighlight { 0xffffe8bf };
 
     juce::Colour blendModeColour (int mode)
     {
-        return mode == 0 ? orange : (mode == 1 ? teal : violet);
+        return mode == 0 ? orange : (mode == 1 ? redGlow : violet);
+    }
+
+
+    // Deterministic pastel/chalk grains: fixed seeds keep the texture from flickering
+    // while the characters animate at 24 Hz.
+    void drawChalkTexture (juce::Graphics& g, const juce::Path& shape,
+                           juce::Colour pigment, std::uint32_t seed,
+                           int marks, float strength)
+    {
+        const auto bounds = shape.getBounds();
+        if (bounds.isEmpty())
+            return;
+
+        std::uint32_t state = seed;
+        const auto nextUnit = [&state]() mutable
+        {
+            state = state * 1664525u + 1013904223u;
+            return static_cast<float> ((state >> 8) & 0x00ffffffu) / 16777215.0f;
+        };
+
+        for (int i = 0; i < marks; ++i)
+        {
+            const float px = bounds.getX() + nextUnit() * bounds.getWidth();
+            const float py = bounds.getY() + nextUnit() * bounds.getHeight();
+            if (!shape.contains (px, py))
+                continue;
+
+            const float grain = nextUnit();
+            const float length = 0.45f + nextUnit() * 2.25f;
+            const auto tone = (i % 5 == 0) ? chalkHighlight
+                              : (i % 3 == 0) ? pigment.brighter (0.25f)
+                                             : pigment.darker (0.24f);
+            g.setColour (tone.withAlpha (strength * (0.30f + grain * 0.70f)));
+            if (i % 4 == 0)
+                g.drawLine (px, py, px + length, py + (nextUnit() - 0.5f) * 0.75f,
+                            0.35f + nextUnit() * 0.55f);
+            else
+            {
+                const float size = 0.35f + nextUnit() * 0.85f;
+                g.fillEllipse (px, py, size, size * (0.55f + nextUnit() * 0.7f));
+            }
+        }
+    }
+
+    void drawChalkBoardWear (juce::Graphics& g, juce::Rectangle<float> bounds)
+    {
+        juce::Path board;
+        board.addRoundedRectangle (bounds, 19.0f);
+        drawChalkTexture (g, board, orange, 0x53504954u, 1500, 0.085f);
+
+        std::uint32_t state = 0x56494e54u;
+        const auto nextUnit = [&state]() mutable
+        {
+            state = state * 1103515245u + 12345u;
+            return static_cast<float> ((state >> 8) & 0x00ffffffu) / 16777215.0f;
+        };
+
+        // Dry scratches cluster near the bevel, like an old chalk-painted console.
+        for (int i = 0; i < 105; ++i)
+        {
+            const float side = nextUnit();
+            const float along = nextUnit();
+            const float len = 1.8f + nextUnit() * 10.0f;
+            float x = bounds.getX() + along * bounds.getWidth();
+            float y = bounds.getY() + 2.0f + nextUnit() * 12.0f;
+            float dx = len, dy = -0.8f + nextUnit() * 1.6f;
+            if (side < 0.25f) { y = bounds.getBottom() - 3.0f - nextUnit() * 12.0f; dy *= -1.0f; }
+            else if (side < 0.50f) { x = bounds.getX() + 2.0f + nextUnit() * 12.0f; y = bounds.getY() + along * bounds.getHeight(); dx = -0.8f + nextUnit() * 1.6f; dy = len; }
+            else if (side < 0.75f) { x = bounds.getRight() - 3.0f - nextUnit() * 12.0f; y = bounds.getY() + along * bounds.getHeight(); dx = 0.8f - nextUnit() * 1.6f; dy = len; }
+            g.setColour ((i % 3 == 0 ? chalkHighlight : orange).withAlpha (0.045f + nextUnit() * 0.09f));
+            g.drawLine (x, y, x + dx, y + dy, 0.35f + nextUnit() * 0.6f);
+        }
+    }
+
+    void drawVintageScrew (juce::Graphics& g, float cx, float cy)
+    {
+        g.setColour (juce::Colour (0xff0c0b0a).withAlpha (0.85f));
+        g.fillEllipse (cx - 7.0f, cy - 7.0f, 14.0f, 14.0f);
+        g.setColour (orange.withAlpha (0.75f));
+        g.drawEllipse (cx - 6.5f, cy - 6.5f, 13.0f, 13.0f, 1.0f);
+        g.setColour (cream.withAlpha (0.66f));
+        g.drawLine (cx - 3.3f, cy + 2.8f, cx + 3.0f, cy - 2.6f, 0.9f);
+        g.setColour (paper.brighter (0.6f).withAlpha (0.8f));
+        g.fillEllipse (cx - 1.0f, cy - 1.0f, 2.0f, 2.0f);
     }
 }
 
@@ -38,34 +125,40 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
     const float angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
     const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
 
-    g.setColour (ink.withAlpha (0.88f));
+    g.setColour (ink.withAlpha (0.92f));
     g.setFont (juce::Font (juce::FontOptions (8.8f, juce::Font::bold)));
     g.drawText (slider.getName().toUpperCase(), x + 1, y, width - 2,
                 static_cast<int> (labelHeight), juce::Justification::centred);
 
-    // Gunmetal dial, metallic edge and restrained neon halo.
-    g.setColour (accent.withAlpha (0.11f));
+    g.setColour (accent.withAlpha (0.12f));
     g.drawEllipse (centreX - radius - 7.0f, centreY - radius - 7.0f,
-                   radius * 2.0f + 14.0f, radius * 2.0f + 14.0f, 4.0f);
-    g.setColour (surface.brighter (0.18f));
+                   radius * 2.0f + 14.0f, radius * 2.0f + 14.0f, 3.5f);
+    g.setColour (orange.withAlpha (0.18f));
+    g.drawEllipse (centreX - radius - 3.0f, centreY - radius - 3.0f,
+                   radius * 2.0f + 6.0f, radius * 2.0f + 6.0f, 1.2f);
+    g.setColour (surface.brighter (0.22f));
     g.fillEllipse (centreX - radius - 2.0f, centreY - radius - 2.0f,
                    radius * 2.0f + 4.0f, radius * 2.0f + 4.0f);
 
-    juce::ColourGradient faceGradient (juce::Colour (0xff3a4557),
+    juce::ColourGradient faceGradient (juce::Colour (0xff6e5945),
                                         centreX - radius, centreY - radius,
-                                        juce::Colour (0xff171d28),
+                                        juce::Colour (0xff24201d),
                                         centreX + radius, centreY + radius, false);
     g.setGradientFill (faceGradient);
     g.fillEllipse (centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
-    g.setColour (cream.withAlpha (0.18f));
+    juce::Path dialFace;
+    dialFace.addEllipse (centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
+    drawChalkTexture (g, dialFace, accent, static_cast<std::uint32_t> (x * 101 + y * 31 + width),
+                      76, 0.13f);
+    g.setColour (cream.withAlpha (0.28f));
     g.drawEllipse (centreX - radius + 3.0f, centreY - radius + 3.0f,
-                   radius * 2.0f - 6.0f, radius * 2.0f - 6.0f, 1.0f);
+                   radius * 2.0f - 6.0f, radius * 2.0f - 6.0f, 0.8f);
 
     juce::Path trackArc;
     trackArc.addCentredArc (centreX, centreY, radius + 4.8f, radius + 4.8f, 0.0f,
                             rotaryStartAngle - juce::MathConstants<float>::halfPi,
                             rotaryEndAngle - juce::MathConstants<float>::halfPi, true);
-    g.setColour (line.withAlpha (0.74f));
+    g.setColour (line.withAlpha (0.82f));
     g.strokePath (trackArc, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
                                                   juce::PathStrokeType::rounded));
 
@@ -73,11 +166,11 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
     activeArc.addCentredArc (centreX, centreY, radius + 4.8f, radius + 4.8f, 0.0f,
                              rotaryStartAngle - juce::MathConstants<float>::halfPi,
                              angle - juce::MathConstants<float>::halfPi, true);
-    g.setColour (accent.withAlpha (0.20f));
+    g.setColour (accent.withAlpha (0.22f));
     g.strokePath (activeArc, juce::PathStrokeType (7.0f, juce::PathStrokeType::curved,
                                                    juce::PathStrokeType::rounded));
     g.setColour (accent);
-    g.strokePath (activeArc, juce::PathStrokeType (2.8f, juce::PathStrokeType::curved,
+    g.strokePath (activeArc, juce::PathStrokeType (2.7f, juce::PathStrokeType::curved,
                                                    juce::PathStrokeType::rounded));
 
     const float pointerAngle = angle - juce::MathConstants<float>::halfPi;
@@ -90,6 +183,78 @@ void FuturoKnobLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, i
     g.fillEllipse (centreX - 2.0f, centreY - 2.0f, 4.0f, 4.0f);
 }
 
+void FuturoKnobLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button,
+                                                   const juce::Colour& backgroundColour,
+                                                   bool isMouseOverButton, bool isButtonDown)
+{
+    auto bounds = button.getLocalBounds().toFloat().reduced (1.0f);
+    juce::Path panel;
+    panel.addRoundedRectangle (bounds, 7.0f);
+    const auto accent = button.getToggleState()
+        ? button.findColour (juce::TextButton::buttonOnColourId) : orange.withAlpha (0.55f);
+
+    juce::ColourGradient gradient (backgroundColour.brighter (isMouseOverButton ? 0.18f : 0.05f),
+                                    bounds.getX(), bounds.getY(),
+                                    backgroundColour.darker (isButtonDown ? 0.30f : 0.12f),
+                                    bounds.getRight(), bounds.getBottom(), false);
+    g.setGradientFill (gradient);
+    g.fillPath (panel);
+    drawChalkTexture (g, panel, accent, static_cast<std::uint32_t> (bounds.getX() * 17.0f
+                       + bounds.getY() * 31.0f + bounds.getWidth()), 42, 0.11f);
+    g.setColour (accent.withAlpha (button.getToggleState() ? 0.88f : 0.30f));
+    g.strokePath (panel, juce::PathStrokeType (button.getToggleState() ? 1.45f : 0.8f));
+    if (button.getToggleState())
+    {
+        g.setColour (accent.withAlpha (0.09f));
+        g.fillPath (panel);
+    }
+}
+
+void FuturoKnobLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& button,
+                                             bool isMouseOverButton, bool isButtonDown)
+{
+    auto bounds = button.getLocalBounds().reduced (8, 1);
+    const auto colour = button.getToggleState()
+        ? button.findColour (juce::TextButton::textColourOnId)
+        : button.findColour (juce::TextButton::textColourOffId);
+    g.setColour (colour.withAlpha (isButtonDown ? 0.72f : 1.0f));
+    g.setFont (juce::Font (juce::FontOptions (9.3f, juce::Font::bold)));
+    g.drawFittedText (button.getButtonText(), bounds, juce::Justification::centred, 1);
+    if (isMouseOverButton)
+    {
+        g.setColour (button.findColour (juce::TextButton::buttonOnColourId).withAlpha (0.12f));
+        g.drawRoundedRectangle (button.getLocalBounds().toFloat().reduced (1.0f), 7.0f, 1.0f);
+    }
+}
+
+void FuturoKnobLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height,
+                                           bool isButtonDown, int buttonX, int buttonY,
+                                           int buttonW, int buttonH, juce::ComboBox& box)
+{
+    auto bounds = juce::Rectangle<float> (0.0f, 0.0f, static_cast<float> (width),
+                                           static_cast<float> (height)).reduced (1.0f);
+    juce::Path panel;
+    panel.addRoundedRectangle (bounds, 8.0f);
+    const auto bg = box.findColour (juce::ComboBox::backgroundColourId);
+    juce::ColourGradient gradient (bg.brighter (0.07f), bounds.getX(), bounds.getY(),
+                                    bg.darker (isButtonDown ? 0.28f : 0.10f),
+                                    bounds.getRight(), bounds.getBottom(), false);
+    g.setGradientFill (gradient);
+    g.fillPath (panel);
+    drawChalkTexture (g, panel, orange, 0x4355504bu, 58, 0.10f);
+    g.setColour (box.findColour (juce::ComboBox::outlineColourId).withAlpha (0.95f));
+    g.strokePath (panel, juce::PathStrokeType (1.0f));
+    const float arrowCentreX = static_cast<float> (buttonX + buttonW / 2);
+    const float arrowCentreY = static_cast<float> (buttonY + buttonH / 2);
+    juce::Path arrow;
+    arrow.startNewSubPath (arrowCentreX - 4.5f, arrowCentreY - 1.8f);
+    arrow.lineTo (arrowCentreX, arrowCentreY + 2.5f);
+    arrow.lineTo (arrowCentreX + 4.5f, arrowCentreY - 1.8f);
+    g.setColour (box.findColour (juce::ComboBox::arrowColourId));
+    g.strokePath (arrow, juce::PathStrokeType (1.5f, juce::PathStrokeType::curved,
+                                               juce::PathStrokeType::rounded));
+}
+
 FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpringAudioProcessor& p)
     : AudioProcessorEditor (&p), processor (p)
 {
@@ -98,8 +263,8 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     setResizeLimits (860, 620, 1240, 840);
     setLookAndFeel (&knobLookAndFeel);
 
-    heading.setText ("FUTURO", juce::dontSendNotification);
-    heading.setFont (juce::Font (juce::FontOptions (38.0f)));
+    heading.setText ("SPIRITUS", juce::dontSendNotification);
+    heading.setFont (juce::Font (juce::FontOptions (36.0f)));
     heading.setColour (juce::Label::textColourId, cream);
     heading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (heading);
@@ -121,6 +286,9 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     presetMenu.setColour (juce::ComboBox::textColourId, cream);
     presetMenu.setColour (juce::ComboBox::outlineColourId, line);
     presetMenu.setColour (juce::ComboBox::arrowColourId, orange);
+    presetMenu.setLookAndFeel (&knobLookAndFeel);
+    presetMenu.setColour (juce::ComboBox::textColourId, cream);
+    presetMenu.setColour (juce::ComboBox::outlineColourId, orange.withAlpha (0.72f));
     presetMenu.onChange = [this]
     {
         const int selectedPreset = presetMenu.getSelectedId();
@@ -160,6 +328,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
 
     for (auto* button : { &classic, &flex, &dream })
     {
+        button->setLookAndFeel (&knobLookAndFeel);
         button->setClickingTogglesState (true);
         button->setRadioGroupId (901);
         button->setColour (juce::TextButton::buttonColourId, surface.withAlpha (0.90f));
@@ -174,6 +343,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     flex.onClick    = [this] { setMode (1); };
     dream.onClick   = [this] { setMode (2); };
 
+    fiuso.setLookAndFeel (&knobLookAndFeel);
     fiuso.setClickingTogglesState (true);
     fiuso.setColour (juce::TextButton::buttonColourId, surface);
     fiuso.setColour (juce::TextButton::buttonOnColourId, orange);
@@ -208,6 +378,9 @@ FuturoSpringAudioProcessorEditor::~FuturoSpringAudioProcessorEditor()
 {
     stopTimer();
     setLookAndFeel (nullptr);
+    presetMenu.setLookAndFeel (nullptr);
+    for (auto* button : { &classic, &flex, &dream, &fiuso })
+        button->setLookAndFeel (nullptr);
     for (auto* slider : { &mix, &intensity, &saturation, &character, &tone, &inputGain, &outputGain })
         slider->setLookAndFeel (nullptr);
 }
@@ -398,26 +571,31 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     const auto auraColour = modeColour.interpolatedWith (orange, devil * 0.78f);
 
     // Retro-futurist glass panel, deep ink and a pair of warm/cool edge glows.
-    juce::ColourGradient backgroundGradient (juce::Colour (0xff0d111a), 0.0f, 0.0f,
-                                              juce::Colour (0xff222a3a),
+    juce::ColourGradient backgroundGradient (juce::Colour (0xff100d0b), 0.0f, 0.0f,
+                                              juce::Colour (0xff35271e),
                                               static_cast<float> (width), static_cast<float> (height), false);
     g.setGradientFill (backgroundGradient);
     g.fillAll();
 
-    juce::ColourGradient panelGradient (juce::Colour (0xf32c3445), outer.getX(), outer.getY(),
-                                         juce::Colour (0xf41a202d), outer.getRight(), outer.getBottom(), false);
+    juce::ColourGradient panelGradient (juce::Colour (0xf5372b21), outer.getX(), outer.getY(),
+                                         juce::Colour (0xf51a1816), outer.getRight(), outer.getBottom(), false);
     g.setGradientFill (panelGradient);
     g.fillRoundedRectangle (outer, 20.0f);
+    drawChalkBoardWear (g, outer);
 
-    g.setColour (blue.withAlpha (0.14f));
+    g.setColour (orange.withAlpha (0.12f));
     g.drawRoundedRectangle (outer.reduced (1.2f), 20.0f, 5.0f);
-    g.setColour (orange.withAlpha (0.35f));
+    g.setColour (orange.withAlpha (0.48f));
     g.drawRoundedRectangle (outer, 20.0f, 1.1f);
     g.setColour (line.withAlpha (0.65f));
     g.drawRoundedRectangle (outer.reduced (5.0f), 16.0f, 0.8f);
+    drawVintageScrew (outer.getX() + 18.0f, outer.getY() + 18.0f);
+    drawVintageScrew (outer.getRight() - 18.0f, outer.getY() + 18.0f);
+    drawVintageScrew (outer.getX() + 18.0f, outer.getBottom() - 18.0f);
+    drawVintageScrew (outer.getRight() - 18.0f, outer.getBottom() - 18.0f);
 
     // Sparse scanlines and technical guide marks keep the finish analog, not noisy.
-    g.setColour (cream.withAlpha (0.018f));
+    g.setColour (chalkHighlight.withAlpha (0.025f));
     for (int y = 112; y < height - 188; y += 5)
         g.drawLine (24.0f, static_cast<float> (y), static_cast<float> (width - 24),
                     static_cast<float> (y), 0.45f);
@@ -428,7 +606,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.fillEllipse (width - 48.0f, 31.0f, 7.0f, 7.0f);
     g.setColour (cream.withAlpha (0.68f));
     g.setFont (juce::Font (juce::FontOptions (9.2f)));
-    g.drawText ("SPRING REVERB  /  ANALOG IMAGINATION", width - 360, 45, 300, 17,
+    g.drawText ("SPRING REVERB  /  CHALK & CIRCUITRY", width - 360, 45, 300, 17,
                 juce::Justification::centredRight);
 
     // Technical target marks around the characters.
@@ -508,6 +686,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     peachFeathers.cubicTo (-58.0f, 10.0f, -67.0f, 27.0f, -54.0f, 31.0f);
     g.setColour (rose.withAlpha (0.96f));
     g.fillPath (peachWing);
+    drawChalkTexture (g, peachWing, rose, 0x50454143u, 190, 0.30f);
     g.setColour (cream.withAlpha (0.94f));
     g.strokePath (peachFeathers, juce::PathStrokeType (3.8f, juce::PathStrokeType::curved,
                                                        juce::PathStrokeType::rounded));
@@ -528,33 +707,108 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     blueBody.closeSubPath();
     g.setColour (blue);
     g.fillPath (blueBody);
+    drawChalkTexture (g, blueBody, blue, 0x424c5545u, 265, 0.30f);
 
-    // Charcoal feathers animate open with the same eased parameter.
+    // SOMNIUM gives the blue angel a worn brass astronaut helmet with a glassy,
+    // chalk-blue visor. The face remains visible under the translucent glass.
+    if (visualMode == 2)
+    {
+        g.setColour (charcoal.withAlpha (0.95f));
+        g.fillEllipse (-10.0f, -108.0f, 61.0f, 61.0f);
+        juce::Path helmetGlass;
+        helmetGlass.addEllipse (-6.0f, -104.0f, 53.0f, 53.0f);
+        g.setColour (blue.withAlpha (0.16f));
+        g.fillPath (helmetGlass);
+        drawChalkTexture (g, helmetGlass, blue, 0x48454c4du, 86, 0.12f);
+        g.setColour (orange.withAlpha (0.96f));
+        g.drawEllipse (-10.0f, -108.0f, 61.0f, 61.0f, 2.0f);
+        g.setColour (cream.withAlpha (0.88f));
+        g.drawEllipse (-5.0f, -103.0f, 51.0f, 51.0f, 1.0f);
+        g.setColour (orange.withAlpha (0.82f));
+        g.drawLine (0.0f, -53.0f, 34.0f, -53.0f, 2.7f);
+        g.setColour (cream.withAlpha (0.65f));
+        g.drawLine (-2.0f, -97.0f, 7.0f, -89.0f, 1.1f);
+        g.drawLine (42.0f, -86.0f, 45.0f, -78.0f, 0.9f);
+        g.setColour (orange.withAlpha (0.90f));
+        g.fillEllipse (-8.0f, -81.0f, 3.6f, 3.6f);
+        g.fillEllipse (47.0f, -81.0f, 3.6f, 3.6f);
+        // A tiny oxygen hose coils down toward the blue suit.
+        juce::Path oxygenHose;
+        oxygenHose.startNewSubPath (44.0f, -57.0f);
+        oxygenHose.cubicTo (57.0f, -53.0f, 61.0f, -41.0f, 52.0f, -35.0f);
+        g.setColour (teal.withAlpha (0.92f));
+        g.strokePath (oxygenHose, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+        drawChalkTexture (g, blueBody, blue, 0x4d4f4445u, 80, 0.10f);
+    }
+
+    // NOVUS is marked by unmistakable bat wings; other modes keep the
+    // charcoal feathered wing from the original crayon drawing.
     g.saveState();
     g.addTransform (juce::AffineTransform (wingOpen, 0.0f, 31.0f * (1.0f - wingOpen),
                                            0.0f, 1.0f, 0.0f));
-    juce::Path darkWing;
-    darkWing.startNewSubPath (29.0f, -33.0f);
-    darkWing.cubicTo (44.0f, -57.0f, 70.0f, -57.0f, 87.0f, -42.0f);
-    darkWing.cubicTo (105.0f, -27.0f, 110.0f, -9.0f, 95.0f, 1.0f);
-    darkWing.cubicTo (83.0f, 10.0f, 68.0f, -2.0f, 57.0f, -7.0f);
-    darkWing.cubicTo (46.0f, -10.0f, 37.0f, -6.0f, 31.0f, 2.0f);
-    darkWing.cubicTo (27.0f, -8.0f, 24.0f, -22.0f, 29.0f, -33.0f);
-    darkWing.closeSubPath();
-    g.setColour (charcoal);
-    g.fillPath (darkWing);
-    juce::Path darkFeathers;
-    for (int i = 0; i < 3; ++i)
+    if (visualMode == 1)
     {
-        const float yy = -39.0f + static_cast<float> (i) * 11.0f;
-        darkFeathers.startNewSubPath (37.0f, yy);
-        darkFeathers.cubicTo (54.0f, yy - 9.0f, 77.0f, yy + 2.0f, 91.0f, yy + 13.0f);
-    }
-    g.setColour (cream.withAlpha (0.57f));
-    g.strokePath (darkFeathers, juce::PathStrokeType (1.9f, juce::PathStrokeType::curved,
+        juce::Path batWing;
+        batWing.startNewSubPath (29.0f, -33.0f);
+        batWing.cubicTo (44.0f, -56.0f, 62.0f, -55.0f, 76.0f, -42.0f);
+        batWing.lineTo (84.0f, -60.0f);
+        batWing.lineTo (92.0f, -40.0f);
+        batWing.lineTo (111.0f, -39.0f);
+        batWing.lineTo (100.0f, -20.0f);
+        batWing.lineTo (107.0f, -4.0f);
+        batWing.lineTo (85.0f, -9.0f);
+        batWing.lineTo (73.0f, 7.0f);
+        batWing.lineTo (58.0f, -8.0f);
+        batWing.lineTo (43.0f, -5.0f);
+        batWing.lineTo (31.0f, 2.0f);
+        batWing.cubicTo (25.0f, -9.0f, 23.0f, -22.0f, 29.0f, -33.0f);
+        batWing.closeSubPath();
+        g.setColour (demonWing);
+        g.fillPath (batWing);
+        g.setColour (redGlow.withAlpha (0.94f));
+        g.strokePath (batWing, juce::PathStrokeType (1.9f, juce::PathStrokeType::curved,
+                                                     juce::PathStrokeType::rounded));
+        drawChalkTexture (g, batWing, redGlow, 0x4e4f5653u, 180, 0.27f);
+        juce::Path wingRibs;
+        wingRibs.startNewSubPath (32.0f, -31.0f);
+        wingRibs.lineTo (84.0f, -51.0f);
+        wingRibs.lineTo (92.0f, -38.0f);
+        wingRibs.startNewSubPath (39.0f, -19.0f);
+        wingRibs.lineTo (100.0f, -21.0f);
+        wingRibs.startNewSubPath (35.0f, -8.0f);
+        wingRibs.lineTo (86.0f, -9.0f);
+        wingRibs.lineTo (73.0f, 5.0f);
+        g.setColour (orange.withAlpha (0.94f));
+        g.strokePath (wingRibs, juce::PathStrokeType (1.5f, juce::PathStrokeType::curved,
                                                       juce::PathStrokeType::rounded));
-    g.setColour (cream.withAlpha (0.68f));
-    g.drawEllipse (30.0f, -30.0f, 13.0f, 13.0f, 2.0f);
+    }
+    else
+    {
+        juce::Path darkWing;
+        darkWing.startNewSubPath (29.0f, -33.0f);
+        darkWing.cubicTo (44.0f, -57.0f, 70.0f, -57.0f, 87.0f, -42.0f);
+        darkWing.cubicTo (105.0f, -27.0f, 110.0f, -9.0f, 95.0f, 1.0f);
+        darkWing.cubicTo (83.0f, 10.0f, 68.0f, -2.0f, 57.0f, -7.0f);
+        darkWing.cubicTo (46.0f, -10.0f, 37.0f, -6.0f, 31.0f, 2.0f);
+        darkWing.cubicTo (27.0f, -8.0f, 24.0f, -22.0f, 29.0f, -33.0f);
+        darkWing.closeSubPath();
+        g.setColour (charcoal);
+        g.fillPath (darkWing);
+        drawChalkTexture (g, darkWing, charcoal, 0x4348414cu, 155, 0.29f);
+        juce::Path darkFeathers;
+        for (int i = 0; i < 3; ++i)
+        {
+            const float yy = -39.0f + static_cast<float> (i) * 11.0f;
+            darkFeathers.startNewSubPath (37.0f, yy);
+            darkFeathers.cubicTo (54.0f, yy - 9.0f, 77.0f, yy + 2.0f, 91.0f, yy + 13.0f);
+        }
+        g.setColour (cream.withAlpha (0.57f));
+        g.strokePath (darkFeathers, juce::PathStrokeType (1.9f, juce::PathStrokeType::curved,
+                                                          juce::PathStrokeType::rounded));
+        g.setColour (cream.withAlpha (0.68f));
+        g.drawEllipse (30.0f, -30.0f, 13.0f, 13.0f, 2.0f);
+    }
     g.restoreState();
 
     // Expression interpolation: tearful frown at minimum, grin and horns at maximum.
@@ -566,15 +820,15 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     juce::Path blueMouth;
     blueMouth.startNewSubPath (12.0f, -68.0f);
-    blueMouth.cubicTo (14.0f, -75.0f + mood * 13.0f,
-                       20.0f, -75.0f + mood * 13.0f, 22.0f, -68.0f);
+    blueMouth.cubicTo (14.0f, -63.0f - mood * 12.0f,
+                       20.0f, -63.0f - mood * 12.0f, 22.0f, -68.0f);
     g.setColour (faceInk);
     g.strokePath (blueMouth, juce::PathStrokeType (2.4f, juce::PathStrokeType::curved,
                                                   juce::PathStrokeType::rounded));
 
     juce::Path blueBrow;
     blueBrow.startNewSubPath (12.0f, -86.0f);
-    blueBrow.lineTo (21.0f, -85.0f + devil * 3.0f);
+    blueBrow.lineTo (21.0f, -82.5f - sad * 3.4f + devil * 2.2f);
     g.setColour (faceInk.withAlpha (0.84f));
     g.strokePath (blueBrow, juce::PathStrokeType (1.6f, juce::PathStrokeType::curved,
                                                   juce::PathStrokeType::rounded));
@@ -602,6 +856,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     greenBody.closeSubPath();
     g.setColour (green);
     g.fillPath (greenBody);
+    drawChalkTexture (g, greenBody, green, 0x47524545u, 230, 0.30f);
 
     juce::Path embraceArm;
     embraceArm.startNewSubPath (-37.0f, 4.0f);
@@ -612,6 +867,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     embraceArm.cubicTo (-36.0f, 21.0f, -42.0f, 15.0f, -37.0f, 4.0f);
     embraceArm.closeSubPath();
     g.fillPath (embraceArm);
+    drawChalkTexture (g, embraceArm, green, 0x41524d43u, 115, 0.28f);
 
     juce::Path greenHighlight;
     greenHighlight.startNewSubPath (-44.0f, -35.0f);
@@ -627,15 +883,15 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     juce::Path greenMouth;
     greenMouth.startNewSubPath (-44.0f, -27.0f);
-    greenMouth.cubicTo (-42.0f, -34.0f + mood * 12.0f,
-                        -36.0f, -34.0f + mood * 12.0f, -34.0f, -27.0f);
+    greenMouth.cubicTo (-42.0f, -22.0f - mood * 12.0f,
+                        -36.0f, -22.0f - mood * 12.0f, -34.0f, -27.0f);
     g.setColour (faceInk);
     g.strokePath (greenMouth, juce::PathStrokeType (2.2f, juce::PathStrokeType::curved,
                                                     juce::PathStrokeType::rounded));
 
     juce::Path greenBrow;
     greenBrow.startNewSubPath (-44.0f, -45.0f);
-    greenBrow.lineTo (-35.0f, -44.0f + devil * 3.0f);
+    greenBrow.lineTo (-35.0f, -42.0f - sad * 3.4f + devil * 2.2f);
     g.setColour (faceInk.withAlpha (0.84f));
     g.strokePath (greenBrow, juce::PathStrokeType (1.5f, juce::PathStrokeType::curved,
                                                    juce::PathStrokeType::rounded));
@@ -751,6 +1007,30 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     g.setFont (juce::Font (juce::FontOptions (8.6f)));
     g.drawText (modeSubtitle, juce::roundToInt (cx - 120.0f), 407, 240, 14,
                 juce::Justification::centred);
+
+    // Voice note, three lines, changes with the actual mode (not a fake fourth mode).
+    const float noteX = static_cast<float> (width) - 218.0f;
+    const juce::String noteTitle = visualMode == 0 ? "CLASSICUS / COPPER"
+                                : visualMode == 1 ? "NOVUS / VOLTAGE"
+                                                  : "SOMNIUM / ORBIT";
+    const juce::String noteOne = visualMode == 0 ? "Warm space."
+                              : visualMode == 1 ? "Voltage bite."
+                                                : "Weightless echoes.";
+    const juce::String noteTwo = visualMode == 0 ? "Soft reflections."
+                              : visualMode == 1 ? "A restless spring."
+                                                : "A distant orbit.";
+    const juce::String noteThree = visualMode == 0 ? "A place to return."
+                                : visualMode == 1 ? "A little danger."
+                                                  : "Room among stars.";
+    g.setColour (orange.withAlpha (0.95f));
+    g.setFont (juce::Font (juce::FontOptions (9.1f, juce::Font::bold)));
+    g.drawText (noteTitle, juce::roundToInt (noteX), 186, 196, 18,
+                juce::Justification::centredLeft);
+    g.setColour (cream.withAlpha (0.82f));
+    g.setFont (juce::Font (juce::FontOptions (10.4f)));
+    g.drawText (noteOne, juce::roundToInt (noteX), 218, 196, 19, juce::Justification::centredLeft);
+    g.drawText (noteTwo, juce::roundToInt (noteX), 244, 196, 19, juce::Justification::centredLeft);
+    g.drawText (noteThree, juce::roundToInt (noteX), 270, 196, 19, juce::Justification::centredLeft);
 
     g.setColour (line.withAlpha (0.72f));
     g.drawLine (30.0f, static_cast<float> (height - 195), static_cast<float> (width - 30),
