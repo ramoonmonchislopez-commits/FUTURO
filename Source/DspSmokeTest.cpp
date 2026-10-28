@@ -261,7 +261,7 @@ int main()
     // must stay finite, remain under the output ceiling, and decay instead of regenerating.
     for (int mode = 0; mode < 3; ++mode)
     {
-        const auto stressed = renderImpulse (mode, 65.0f, 0.70f, 1.0f, 8.0f, 1.0f, 18.0f);
+        const auto stressed = renderImpulse (mode, 100.0f, 0.70f, 1.0f, 8.0f, 1.0f, 18.0f);
         if (! stressed.finite || stressed.peak > 0.985f || stressed.latePeak > 0.001f)
         {
             std::cerr << "FAIL: stressed wet feedback unstable in mode " << mode
@@ -277,7 +277,7 @@ int main()
     // FIUSO's parallel harmonic layers must also remain bounded under a hot impulse.
     for (int mode = 0; mode < 3; ++mode)
     {
-        const auto stressedFiuso = renderImpulse (mode, 65.0f, 0.70f, 1.0f, 8.0f, 1.0f, 18.0f, true);
+        const auto stressedFiuso = renderImpulse (mode, 100.0f, 0.70f, 1.0f, 8.0f, 1.0f, 18.0f, true);
         if (! stressedFiuso.finite || stressedFiuso.peak > 0.985f || stressedFiuso.latePeak > 0.001f)
         {
             std::cerr << "FAIL: FIUSO stress unstable in mode " << mode
