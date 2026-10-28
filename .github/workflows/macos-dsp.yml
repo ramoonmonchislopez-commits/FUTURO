@@ -4,14 +4,15 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches:
-      - main
-      - "improve/**"
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   dsp-smoke:
@@ -61,4 +62,4 @@ jobs:
             build/Spiritus-Spring-Reverb-*-macOS-arm64.pkg
             build/Spiritus-Spring-Reverb-*-macOS-arm64.pkg.sha256
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
