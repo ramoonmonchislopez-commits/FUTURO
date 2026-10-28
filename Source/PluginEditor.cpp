@@ -105,6 +105,11 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
 
+    styleMiniFader (inputGain, "IN", inputLabel);
+    inputGain.setTooltip ("Input trim before the spring and harmonic paths: -24 to +12 dB");
+    styleMiniFader (outputGain, "OUT", outputLabel);
+    outputGain.setTooltip ("Master output trim after the dry, spring, and Fiuso paths: -24 to +12 dB");
+
     classic.setButtonText ("CLASSICUS");
     flex.setButtonText ("NOVUS");
     dream.setButtonText ("SOMNIUM");
@@ -121,6 +126,15 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
         addAndMakeVisible (*button);
     }
 
+    fiusoButton.setButtonText ("Fiuso");
+    fiusoButton.setClickingTogglesState (true);
+    fiusoButton.setTooltip ("Adds a controlled upper-octave harmonic layer and extra harmonic texture; the dry timing stays fixed");
+    fiusoButton.setColour (juce::TextButton::buttonColourId, paper.darker (0.08f));
+    fiusoButton.setColour (juce::TextButton::buttonOnColourId, orange);
+    fiusoButton.setColour (juce::TextButton::textColourOffId, ink);
+    fiusoButton.setColour (juce::TextButton::textColourOnId, cream);
+    addAndMakeVisible (fiusoButton);
+
     classic.onClick = [this] { setMode (0); };
     flex.onClick    = [this] { setMode (1); };
     dream.onClick   = [this] { setMode (2); };
@@ -136,6 +150,9 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     saturationAtt = std::make_unique<SliderAttachment> (p.parameters, "saturation", saturation);
     characterAtt      = std::make_unique<SliderAttachment> (p.parameters, "character", character);
     toneAtt       = std::make_unique<SliderAttachment> (p.parameters, "tone", tone);
+    inputAtt      = std::make_unique<SliderAttachment> (p.parameters, "input", inputGain);
+    outputAtt     = std::make_unique<SliderAttachment> (p.parameters, "output", outputGain);
+    fiusoAtt      = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (p.parameters, "fiuso", fiusoButton);
 
     setMode (static_cast<int> (p.parameters.getRawParameterValue ("mode")->load()));
     startTimerHz (24);
@@ -147,6 +164,30 @@ FuturoSpringAudioProcessorEditor::~FuturoSpringAudioProcessorEditor()
     setLookAndFeel (nullptr);
     for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
         slider->setLookAndFeel (nullptr);
+}
+
+void FuturoSpringAudioProcessorEditor::styleMiniFader (juce::Slider& slider, const juce::String& label,
+                                                        juce::Label& labelComponent)
+{
+    slider.setName (label);
+    slider.setSliderStyle (juce::Slider::LinearVertical);
+    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 50, 16);
+    slider.setTextValueSuffix (" dB");
+    slider.setNumDecimalPlacesToDisplay (1);
+    slider.setColour (juce::Slider::thumbColourId, orange);
+    slider.setColour (juce::Slider::trackColourId, ink.withAlpha (0.75f));
+    slider.setColour (juce::Slider::backgroundColourId, ink.withAlpha (0.12f));
+    slider.setColour (juce::Slider::textBoxTextColourId, ink);
+    slider.setColour (juce::Slider::textBoxBackgroundColourId, paper.withAlpha (0.0f));
+    slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    slider.setColour (juce::Slider::textBoxHighlightColourId, orange.withAlpha (0.35f));
+    addAndMakeVisible (slider);
+
+    labelComponent.setText (label, juce::dontSendNotification);
+    labelComponent.setFont (juce::Font (juce::FontOptions (8.5f, juce::Font::bold)));
+    labelComponent.setColour (juce::Label::textColourId, ink.withAlpha (0.90f));
+    labelComponent.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (labelComponent);
 }
 
 void FuturoSpringAudioProcessorEditor::styleKnob (juce::Slider& slider, const juce::String& label)
@@ -177,18 +218,25 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
-    character.setName ("SPRING");
+    const juce::String characterName = visualMode == 0 ? "SPRING"
+                                    : visualMode == 1 ? "SAG" : "HALO";
+    character.setName (characterName);
     character.setTooltip (visualMode == 0
-        ? "CLASSICUS: vintage spring colour and controlled harmonic drive; no pitch modulation"
+        ? "CLASSICUS / SPRING: vintage spring colour and controlled harmonics; no pitch modulation"
         : visualMode == 1
-            ? "NOVUS: Voltage Sag, a controlled level dip with a slow recovery on the reverb return"
-            : "SOMNIUM: a dark, soft halo on the reverb return; fixed-time colour, no pitch modulation");
+            ? "NOVUS / VOLTAGE SAG: amplitude dip and slow recovery on the reverb return"
+            : "SOMNIUM / HALO: a dark, soft halo on the reverb return; fixed-time colour, no pitch modulation");
 
     const auto accent = currentModeColour();
     for (auto* slider : { &mix, &intensity, &saturation, &character, &tone })
         slider->setColour (juce::Slider::rotarySliderFillColourId, accent);
+    inputGain.setColour (juce::Slider::thumbColourId, accent);
+    inputGain.setColour (juce::Slider::trackColourId, accent.withAlpha (0.82f));
+    outputGain.setColour (juce::Slider::thumbColourId, accent);
+    outputGain.setColour (juce::Slider::trackColourId, accent.withAlpha (0.82f));
     for (auto* button : { &classic, &flex, &dream })
         button->setColour (juce::TextButton::buttonOnColourId, accent);
+    fiusoButton.setColour (juce::TextButton::buttonOnColourId, accent);
     repaint();
 }
 
@@ -236,6 +284,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
                 juce::Justification::centredRight);
 
     const float intensityValue = processor.parameters.getRawParameterValue ("intensity")->load();
+    const float fiusoValue = processor.parameters.getRawParameterValue ("fiuso")->load();
     const float cx = getWidth() * 0.56f;
     const float cy = 245.0f;
     const float radius = 91.0f + intensityValue * 26.0f;
@@ -248,6 +297,16 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
             cy - radius * 0.73f * ringScale, radius * 2.0f * ringScale, radius * 1.46f * ringScale);
         g.setColour (modeColour.withAlpha (0.38f - static_cast<float> (i) * 0.055f));
         g.drawEllipse (orbit, i == 0 ? 1.8f : 1.1f);
+    }
+    if (fiusoValue > 0.001f)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            const float scale = 0.72f + 0.14f * static_cast<float> (i);
+            g.setColour (orange.withAlpha (0.28f * fiusoValue));
+            g.drawEllipse (cx - radius * scale, cy - radius * 0.73f * scale,
+                           radius * 2.0f * scale, radius * 1.46f * scale, 1.4f);
+        }
     }
     for (int i = 0; i < 11; ++i)
     {
@@ -358,7 +417,7 @@ void FuturoSpringAudioProcessorEditor::resized()
     flex.setBounds (left, 183, 116, 35);
     dream.setBounds (left, 227, 116, 35);
 
-    const float fractions[5] { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f };
+    const float fractions[5] { 0.32f, 0.43f, 0.54f, 0.65f, 0.76f };
     const int knobTop = height - 180;
     const int standardWidth = 108;
     const int standardHeight = 126;
@@ -375,4 +434,10 @@ void FuturoSpringAudioProcessorEditor::resized()
                      knobTop + 9, standardWidth, standardHeight);
     tone.setBounds (juce::roundToInt (width * fractions[4]) - standardWidth / 2,
                     knobTop + 9, standardWidth, standardHeight);
+
+    inputLabel.setBounds (158, knobTop - 13, 60, 14);
+    inputGain.setBounds (164, knobTop + 4, 48, 132);
+    outputLabel.setBounds (width - 112, knobTop - 13, 60, 14);
+    outputGain.setBounds (width - 106, knobTop + 4, 48, 132);
+    fiusoButton.setBounds ((width - 132) / 2, 389, 132, 34);
 }
