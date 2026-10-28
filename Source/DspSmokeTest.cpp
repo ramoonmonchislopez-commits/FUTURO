@@ -301,6 +301,75 @@ int main()
         fiuso.releaseResources();
     }
 
+    // IN and OUT faders must provide the expected smoothed gain change with no clipping.
+    {
+        FuturoSpringAudioProcessor inputUnity, inputBoost, outputUnity, outputBoost;
+        for (auto* processor : { &inputUnity, &inputBoost, &outputUnity, &outputBoost })
+        {
+            setParameter (*processor, "mix", 0.0f);
+            setParameter (*processor, "intensity", 0.7f);
+            setParameter (*processor, "saturation", 0.0f);
+            setParameter (*processor, "mode", 0.0f);
+            setParameter (*processor, "inputGain", 0.0f);
+            setParameter (*processor, "outputGain", 0.0f);
+        }
+        setParameter (inputBoost, "inputGain", 6.0f);
+        setParameter (outputBoost, "outputGain", 6.0f);
+        for (auto* processor : { &inputUnity, &inputBoost, &outputUnity, &outputBoost })
+            processor->prepareToPlay (testRate, blockSize);
+
+        std::array<double, 4> energy {};
+        constexpr int trimTestSamples = static_cast<int> (testRate);
+        constexpr int trimWarmupSamples = static_cast<int> (0.20 * testRate);
+        juce::AudioBuffer<float> inputUnityBuffer (2, blockSize);
+        juce::AudioBuffer<float> inputBoostBuffer (2, blockSize);
+        juce::AudioBuffer<float> outputUnityBuffer (2, blockSize);
+        juce::AudioBuffer<float> outputBoostBuffer (2, blockSize);
+        std::array<juce::AudioBuffer<float>*, 4> inputBuffers {
+            &inputUnityBuffer, &inputBoostBuffer, &outputUnityBuffer, &outputBoostBuffer
+        };
+        std::array<FuturoSpringAudioProcessor*, 4> trimProcessors {
+            &inputUnity, &inputBoost, &outputUnity, &outputBoost
+        };
+        juce::MidiBuffer trimMidi;
+        for (int offset = 0; offset < trimTestSamples; offset += blockSize)
+        {
+            const int count = juce::jmin (blockSize, trimTestSamples - offset);
+            for (int channel = 0; channel < 4; ++channel)
+                for (int i = 0; i < count; ++i)
+                {
+                    const float sample = 0.03f * std::sin (juce::MathConstants<float>::twoPi
+                        * 220.0f * static_cast<float> (offset + i) / static_cast<float> (testRate));
+                    inputBuffers[static_cast<size_t> (channel)]->setSample (0, i, sample);
+                    inputBuffers[static_cast<size_t> (channel)]->setSample (1, i, sample);
+                }
+
+            for (int channel = 0; channel < 4; ++channel)
+            {
+                trimProcessors[static_cast<size_t> (channel)]->processBlock (*inputBuffers[static_cast<size_t> (channel)], trimMidi);
+                if (offset >= trimWarmupSamples)
+                    for (int i = 0; i < count; ++i)
+                    {
+                        const double sample = inputBuffers[static_cast<size_t> (channel)]->getSample (0, i);
+                        energy[static_cast<size_t> (channel)] += sample * sample;
+                    }
+            }
+        }
+
+        const double inputRatio = std::sqrt (energy[1] / juce::jmax (1.0e-20, energy[0]));
+        const double outputRatio = std::sqrt (energy[3] / juce::jmax (1.0e-20, energy[2]));
+        if (inputRatio < 1.85 || inputRatio > 2.15 || outputRatio < 1.85 || outputRatio > 2.15)
+        {
+            std::cerr << "FAIL: IN/OUT +6 dB trims are not near 2x amplitude; input ratio="
+                      << inputRatio << " output ratio=" << outputRatio << "\n";
+            return 13;
+        }
+        std::cout << "PASS: IN/OUT +6 dB trim ratios input=" << inputRatio
+                  << " output=" << outputRatio << "\n";
+        for (auto* processor : { &inputUnity, &inputBoost, &outputUnity, &outputBoost })
+            processor->releaseResources();
+    }
+
     // A hot input must remain below digital full scale without using saturation.
     for (int mode = 0; mode < 3; ++mode)
     {

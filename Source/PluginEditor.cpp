@@ -141,7 +141,8 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     fiuso.setColour (juce::TextButton::buttonOnColourId, orange);
     fiuso.setColour (juce::TextButton::textColourOffId, cream);
     fiuso.setColour (juce::TextButton::textColourOnId, cream);
-    fiuso.setTooltip ("FIUSO adds an octave-up harmonic layer to the spring excitation; the direct path stays clean");
+    fiuso.setButtonText ("Fiuso");
+    fiuso.setTooltip ("Fiuso adds octave-up and related even-harmonic texture to the spring excitation; the direct path stays clean");
     addAndMakeVisible (fiuso);
 
     modeParam.addItem ("Classicus", 1);
