@@ -4,9 +4,9 @@ Expressive spring reverb for macOS (Apple Silicon + Intel). Classicus brings a s
 
 ## Status
 
-Version 0.10.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
+Version 0.11.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
 
-The three modes are **Classicus** (vintage spring harmonics), **Novus** (Voltage Sag: amplitude dip and recovery), and **Somnium** (dark, soft wet-field halo). Character effects work only on the reverberated return: they do not modulate delay time or pitch, and the direct path remains unshifted and unfiltered. The wet field can still be coloured by Tone and each mode’s spring network.
+The three modes are **Classicus** (rounded, zero-centred vintage drive), **Novus** (power-stage compression plus Voltage Sag: amplitude dip and recovery), and **Somnium** (soft peak rounding with a dark, wet-field halo). Drive uses a different smooth, bounded saturation curve per mode and remains wet-only. Mode-specific colours are crossfaded continuously; the dry path is not saturated, pitch-modulated, time-shifted or filtered. Intensity controls decay and wet presence, while Tone shapes the wet return.
 
 ## Build on macOS
 
@@ -19,6 +19,10 @@ The build script fetches JUCE 9.0.4, compiles VST3 and AU for arm64, and makes a
 ## GitHub Actions
 
 The workflow at .github/workflows/macos-build.yml builds on GitHub-hosted macOS ARM64 and uploads VST3, AU, .pkg, and SHA-256 checksums as an artifact. Open the Actions tab and download the verified universal macOS artifact from a successful run.
+
+## DSP validation
+
+The automated DSP suite covers finite output, stable decay, mode differentiation, Character and Tone response, mode-specific Drive response, output headroom, dry-path pitch lock, and dry-path isolation from Drive.
 
 ## Validation needed
 

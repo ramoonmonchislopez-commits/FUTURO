@@ -87,6 +87,8 @@ private:
     float processDiffuser (int channel, int mode, float input, float coefficient) noexcept;
     float saturate (float input, float amount) const noexcept;
     float saturateVintage (float input, float amount) const noexcept;
+    float saturateNovus (float input, float amount) const noexcept;
+    float saturateSomnium (float input, float amount) const noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FuturoSpringAudioProcessor)
 };

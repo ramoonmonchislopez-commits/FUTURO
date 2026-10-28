@@ -26,12 +26,12 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f, float mix = 1.0f)
+    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f, float mix = 1.0f, float saturation = 0.0f)
     {
         FuturoSpringAudioProcessor processor;
         setParameter (processor, "mix", mix);
         setParameter (processor, "intensity", intensity);
-        setParameter (processor, "saturation", 0.0f);
+        setParameter (processor, "saturation", saturation);
         setParameter (processor, "character", character);
         setParameter (processor, "tone", tone);
         setParameter (processor, "mode", static_cast<float> (mode));
@@ -226,6 +226,35 @@ int main()
         std::cout << "PASS: mode " << mode << " TONE difference=" << toneDifference << "\n";
     }
 
+    // DRIVE must affect every mode, remain finite, and preserve stable decay.
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        const auto cleanDrive = renderImpulse (mode, 55.0f, 0.65f, 0.80f, 0.65f, 1.0f, 0.0f);
+        const auto pushedDrive = renderImpulse (mode, 55.0f, 0.65f, 0.80f, 0.65f, 1.0f, 18.0f);
+        double differenceEnergy = 0.0, referenceEnergy = 0.0;
+        for (size_t i = 0; i < cleanDrive.samples.size(); ++i)
+        {
+            const double a = cleanDrive.samples[i], b = pushedDrive.samples[i], d = a - b;
+            differenceEnergy += d * d;
+            referenceEnergy += a * a + b * b;
+        }
+        const double driveDifference = std::sqrt (differenceEnergy / juce::jmax (1.0e-20, referenceEnergy));
+        if (! pushedDrive.finite || pushedDrive.peak > 0.985f || pushedDrive.latePeak > 0.001f)
+        {
+            std::cerr << "FAIL: mode " << mode << " DRIVE caused unsafe level or unstable tail; peak="
+                      << pushedDrive.peak << " latePeak=" << pushedDrive.latePeak << "\n";
+            return 9;
+        }
+        if (driveDifference < 0.006)
+        {
+            std::cerr << "FAIL: DRIVE had too little effect in mode " << mode
+                      << "; relative difference=" << driveDifference << "\n";
+            return 10;
+        }
+        std::cout << "PASS: mode " << mode << " DRIVE difference=" << driveDifference
+                  << " peak=" << pushedDrive.peak << " latePeak=" << pushedDrive.latePeak << "\n";
+    }
+
     // A hot input must remain below digital full scale without using saturation.
     for (int mode = 0; mode < 3; ++mode)
     {
@@ -245,6 +274,50 @@ int main()
             std::cerr << "FAIL: mode " << mode << " altered direct-path pitch at high CHARACTER.\n";
             return 8;
         }
+
+    {
+        FuturoSpringAudioProcessor dryA, dryB;
+        for (auto* processor : { &dryA, &dryB })
+        {
+            setParameter (*processor, "mix", 0.0f);
+            setParameter (*processor, "intensity", 0.8f);
+            setParameter (*processor, "character", 100.0f);
+            setParameter (*processor, "tone", 0.9f);
+            setParameter (*processor, "mode", 1.0f);
+        }
+        setParameter (dryA, "saturation", 0.0f);
+        setParameter (dryB, "saturation", 18.0f);
+        dryA.prepareToPlay (testRate, blockSize);
+        dryB.prepareToPlay (testRate, blockSize);
+        juce::AudioBuffer<float> a (2, blockSize), b (2, blockSize);
+        juce::MidiBuffer midi;
+        float maxDryDifference = 0.0f;
+        for (int offset = 0; offset < static_cast<int> (testRate); offset += blockSize)
+        {
+            const int count = juce::jmin (blockSize, static_cast<int> (testRate) - offset);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float sample = 0.22f * std::sin (juce::MathConstants<float>::twoPi
+                    * 431.0f * static_cast<float> (offset + i) / static_cast<float> (testRate));
+                a.setSample (0, i, sample); a.setSample (1, i, sample);
+                b.setSample (0, i, sample); b.setSample (1, i, sample);
+            }
+            dryA.processBlock (a, midi);
+            dryB.processBlock (b, midi);
+            for (int i = 0; i < count; ++i)
+                maxDryDifference = juce::jmax (maxDryDifference,
+                    juce::jmax (std::abs (a.getSample (0, i) - b.getSample (0, i)),
+                                std::abs (a.getSample (1, i) - b.getSample (1, i))));
+        }
+        if (maxDryDifference > 1.0e-6f)
+        {
+            std::cerr << "FAIL: DRIVE changed the dry path; max delta=" << maxDryDifference << "\n";
+            return 11;
+        }
+        std::cout << "PASS: dry path isolation with DRIVE extremes; max delta=" << maxDryDifference << "\n";
+        dryA.releaseResources();
+        dryB.releaseResources();
+    }
 
     std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes, dry pitch lock.\n";
     return 0;

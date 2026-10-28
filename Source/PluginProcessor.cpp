@@ -77,7 +77,7 @@ FuturoSpringAudioProcessor::APVTS::ParameterLayout FuturoSpringAudioProcessor::c
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.25f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "intensity", 1 }, "Intensity",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.55f));
-    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "saturation", 1 }, "Vintage Drive",
+    p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "saturation", 1 }, "Drive",
         juce::NormalisableRange<float> (0.0f, 18.0f, 0.1f), 2.0f));
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "character", 1 }, "Character",
         juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 35.0f));
@@ -190,14 +190,35 @@ float FuturoSpringAudioProcessor::saturate (float input, float amount) const noe
 
 float FuturoSpringAudioProcessor::saturateVintage (float input, float amount) const noexcept
 {
-    // A gently asymmetric soft clip adds even harmonics (especially 2nd harmonic),
-    // a classic analogue colour. The small-signal slope remains close to unity.
+    // Classicus: rounded, zero-centred spring/tape curve. Keeping the transfer odd
+    // avoids DC build-up in the feedback network while still rounding strong peaks.
     const float drive = juce::jlimit (0.0f, 1.0f, amount / 18.0f);
     if (drive < 0.0005f) return input;
     const float gain = 1.0f + 4.5f * drive;
     const float x = input * gain;
-    const float asymmetry = 0.065f * drive;
-    return std::tanh (x + asymmetry * x * x) / gain;
+    const float roundedPeak = x + 0.12f * drive * x * std::abs (x);
+    return std::tanh (roundedPeak) / gain;
+}
+
+float FuturoSpringAudioProcessor::saturateNovus (float input, float amount) const noexcept
+{
+    // Novus: smooth power-stage compression with a long rounded shoulder.
+    // atan(x * gain) / gain retains unity small-signal gain and cannot hard-clip.
+    const float drive = juce::jlimit (0.0f, 1.0f, amount / 18.0f);
+    if (drive < 0.0005f) return input;
+    const float gain = 1.0f + 5.0f * drive;
+    return std::atan (input * gain) / gain;
+}
+
+float FuturoSpringAudioProcessor::saturateSomnium (float input, float amount) const noexcept
+{
+    // Somnium: a softer, low-density saturator that rounds peaks rather than flattening
+    // them. The slope at zero remains unity and the curve stays centred around zero.
+    const float drive = juce::jlimit (0.0f, 1.0f, amount / 18.0f);
+    if (drive < 0.0005f) return input;
+    const float gain = 1.0f + 4.0f * drive;
+    const float x = input * gain;
+    return x / (gain * std::sqrt (1.0f + 0.70f * x * x));
 }
 
 void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
@@ -261,7 +282,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 * (shaped[channel] - dampingState[static_cast<size_t> (channel)]);
             const float sourceLow = dampingState[static_cast<size_t> (channel)];
             const float sourceHigh = shaped[channel] - sourceLow;
-            // This fast edge cue is used only by FLEX to give picked notes a springy snap.
+            // This fast edge cue feeds Novus to give picked notes a springy snap.
             const float transient = shaped[channel] - previousInput[static_cast<size_t> (channel)];
             previousInput[static_cast<size_t> (channel)] = shaped[channel];
 
@@ -309,9 +330,14 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                         + feedback * feedbackSignal
                         + crossFeedback * otherResonators;
                     const float boundedLoopInput = juce::jlimit (-1.5f, 1.5f, loopInput);
-                    resonators[resonatorIndex (channel, mode, stage)].write (
-                        mode == 0 ? saturateVintage (boundedLoopInput, 3.5f + smoothSaturation * 1.1f)
-                                  : saturate (boundedLoopInput, smoothSaturation * (mode == 1 ? 0.60f : 0.45f)));
+                    float saturatedLoop = 0.0f;
+                    if (mode == 0)
+                        saturatedLoop = saturateVintage (boundedLoopInput, 2.2f + smoothSaturation * 1.05f);
+                    else if (mode == 1)
+                        saturatedLoop = saturateNovus (boundedLoopInput, 1.8f + smoothSaturation * 1.15f);
+                    else
+                        saturatedLoop = saturateSomnium (boundedLoopInput, 1.4f + smoothSaturation * 0.90f);
+                    resonators[resonatorIndex (channel, mode, stage)].write (saturatedLoop);
                     output += delayed[stage] * resonatorGains[mode][stage];
                 }
 
@@ -323,13 +349,24 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                                   : (1.18f + 0.30f * intensityCurve);
                 const float earlyGain = mode == 0 ? 0.24f : mode == 1 ? 0.26f : 0.26f;
                 const float tail = output * modeGain;
-                wetTailByMode[mode][channel] = mode == 0
-                    ? saturateVintage (tail, 4.0f + smoothSaturation * 1.1f)
-                    : saturate (tail, smoothSaturation * (mode == 1 ? 0.45f : 0.35f));
-                const float early = diffused * earlyGain;
-                wetEarlyByMode[mode][channel] = mode == 0
-                    ? saturateVintage (early, 2.5f + smoothSaturation * 0.65f)
-                    : saturate (early, smoothSaturation * 0.25f);
+                if (mode == 0)
+                {
+                    wetTailByMode[mode][channel] = saturateVintage (tail, 3.0f + smoothSaturation * 1.10f);
+                    const float early = diffused * earlyGain;
+                    wetEarlyByMode[mode][channel] = saturateVintage (early, 1.8f + smoothSaturation * 0.65f);
+                }
+                else if (mode == 1)
+                {
+                    wetTailByMode[mode][channel] = saturateNovus (tail, 2.2f + smoothSaturation * 1.00f);
+                    const float early = diffused * earlyGain;
+                    wetEarlyByMode[mode][channel] = saturateNovus (early, 1.5f + smoothSaturation * 0.60f);
+                }
+                else
+                {
+                    wetTailByMode[mode][channel] = saturateSomnium (tail, 1.7f + smoothSaturation * 0.85f);
+                    const float early = diffused * earlyGain;
+                    wetEarlyByMode[mode][channel] = saturateSomnium (early, 1.2f + smoothSaturation * 0.50f);
+                }
             }
         }
 
@@ -342,61 +379,56 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 wetEarly[channel] += wetEarlyByMode[mode][channel] * modeWeights[mode];
             }
 
-        // Character processing is wet-only: the dry path is never time-shifted,
-        // pitch-modulated, widened or filtered by these signatures.
-        float wet[2] { wetEarly[0] + wetTail[0], wetEarly[1] + wetTail[1] };
+        // Mode-specific saturation and colour are evaluated continuously, then crossfaded
+        // using the same weights as the delay networks. This avoids abrupt timbral steps
+        // during mode changes while leaving the direct signal entirely untouched.
+        const float wetBase[2] { wetEarly[0] + wetTail[0], wetEarly[1] + wetTail[1] };
+        float wet[2] {};
         const float character = juce::jlimit (0.0f, 1.0f, smoothCharacter);
+        const float characterCurve = std::pow (character, 0.80f);
+        const float characterDepth = std::pow (character, 0.76f);
 
-        if (modePosition < 0.5f)
+        // Keep the Novus detector tracking in every mode; switching back to it will not
+        // resume from an old envelope or stale gain value.
+        const float inputPeak = juce::jmax (std::abs (shaped[0]), std::abs (shaped[1]));
+        const float envelopeCoefficient = inputPeak > voltageSagEnvelope
+                                        ? sagEnvelopeAttack : sagEnvelopeRelease;
+        voltageSagEnvelope += envelopeCoefficient * (inputPeak - voltageSagEnvelope);
+        const float normalizedLoad = voltageSagEnvelope / (voltageSagEnvelope + 0.16f);
+        const float sagTarget = 1.0f - 0.68f * characterDepth * normalizedLoad;
+        const float sagCoefficient = sagTarget < voltageSagGain ? sagGainAttack : sagGainRelease;
+        voltageSagGain += sagCoefficient * (sagTarget - voltageSagGain);
+
+        for (int channel = 0; channel < inputChannels; ++channel)
         {
-            // CLASSICUS: controllable vintage spring drive, with no time modulation.
-            // The asymmetric transfer adds harmonics while preserving the timing.
-            for (int channel = 0; channel < inputChannels; ++channel)
-            {
-                const float characterCurve = std::pow (character, 0.80f);
-                // More asymmetrical drive makes the vintage spring signature audible
-                // at normal levels without adding wow/flutter or touching the dry path.
-                wet[channel] = saturateVintage (wet[channel] * (1.0f + 0.42f * character),
-                                                3.0f + 14.5f * characterCurve + 0.35f * smoothSaturation);
-                // Fixed character-controlled damping gives a rounded vintage return.
-                const float cutoff = 14000.0f - 9000.0f * character;
-                const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
-                auto& vintage = classicusToneState[static_cast<size_t> (channel)];
-                vintage += alpha * (wet[channel] - vintage);
-                const float blend = 0.58f * character;
-                wet[channel] = wet[channel] * (1.0f - blend) + vintage * blend;
-            }
-        }
-        else if (modePosition < 1.5f)
-        {
-            // NOVUS / VOLTAGE SAG: supply-style amplitude droop and slow recovery.
-            // The detector controls level only; no moving delay or pitch shift is used.
-            const float inputPeak = juce::jmax (std::abs (shaped[0]), std::abs (shaped[1]));
-            const float envelopeCoefficient = inputPeak > voltageSagEnvelope
-                                            ? sagEnvelopeAttack : sagEnvelopeRelease;
-            voltageSagEnvelope += envelopeCoefficient * (inputPeak - voltageSagEnvelope);
-            const float normalizedLoad = voltageSagEnvelope / (voltageSagEnvelope + 0.16f);
-            const float characterDepth = std::pow (character, 0.76f);
-            // Deeper supply droop and slower recovery give Novus its audible sag/bloom.
-            const float sagTarget = 1.0f - 0.68f * characterDepth * normalizedLoad;
-            const float sagCoefficient = sagTarget < voltageSagGain ? sagGainAttack : sagGainRelease;
-            voltageSagGain += sagCoefficient * (sagTarget - voltageSagGain);
-            for (int channel = 0; channel < inputChannels; ++channel)
-                wet[channel] *= voltageSagGain;
-        }
-        else
-        {
-            // SOMNIUM / HALO: a fixed, dark spectral halo on the wet return only.
-            // One-pole smoothing changes colour but never delay time or pitch.
-            for (int channel = 0; channel < inputChannels; ++channel)
-            {
-                const float cutoff = 4200.0f - 2500.0f * character;
-                const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
-                auto& halo = characterLowpassState[static_cast<size_t> (channel)];
-                halo += alpha * (wet[channel] - halo);
-                wet[channel] = wet[channel] * (1.0f - 0.34f * character)
-                             + halo * (0.62f * character);
-            }
+            // CLASSICUS: warm, rounded spring/tape drive and character-controlled damping.
+            float classicus = saturateVintage (wetBase[channel] * (1.0f + 0.25f * character),
+                                                2.2f + 10.5f * characterCurve + 0.65f * smoothSaturation);
+            const float vintageCutoff = 14000.0f - 9000.0f * character;
+            const float vintageAlpha = 1.0f - std::exp (-twoPi * vintageCutoff / fs);
+            auto& vintage = classicusToneState[static_cast<size_t> (channel)];
+            vintage += vintageAlpha * (classicus - vintage);
+            classicus = classicus * (1.0f - 0.58f * character)
+                      + vintage * (0.58f * character);
+
+            // NOVUS: power-stage compression precedes the slow voltage-sag recovery.
+            float novus = saturateNovus (wetBase[channel] * (1.0f + 0.12f * characterDepth),
+                                          2.0f + smoothSaturation * 1.05f + 4.0f * characterDepth);
+            novus *= voltageSagGain;
+
+            // SOMNIUM: softer peak rounding follows its fixed, dark spectral halo.
+            const float haloCutoff = 4200.0f - 2500.0f * character;
+            const float haloAlpha = 1.0f - std::exp (-twoPi * haloCutoff / fs);
+            auto& halo = characterLowpassState[static_cast<size_t> (channel)];
+            halo += haloAlpha * (wetBase[channel] - halo);
+            float somnium = wetBase[channel] * (1.0f - 0.34f * character)
+                          + halo * (0.62f * character);
+            somnium = saturateSomnium (somnium, 1.6f + smoothSaturation * 0.85f
+                                                   + 3.2f * characterDepth);
+
+            wet[channel] = classicus * modeWeights[0]
+                         + novus * modeWeights[1]
+                         + somnium * modeWeights[2];
         }
 
         // Lift the wet return after its signature: the direct path stays untouched.

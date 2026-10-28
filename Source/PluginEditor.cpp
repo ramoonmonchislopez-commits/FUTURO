@@ -97,10 +97,11 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     addAndMakeVisible (subheading);
 
     styleKnob (mix, "MIX");
-    styleKnob (saturation, "VINTAGE DRIVE");
+    styleKnob (saturation, "DRIVE");
+    saturation.setTooltip ("Mode-specific drive: vintage warmth, power-stage compression, or soft rounded saturation");
     styleKnob (intensity, "INTENSITY");
     intensity.setTooltip ("More reverb body and a longer spring decay; the upper range pushes harder");
-    styleKnob (character, "VINTAGE SPRING");
+    styleKnob (character, "SPRING");
     character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
 
@@ -176,9 +177,7 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     flex.setToggleState (visualMode == 1, juce::dontSendNotification);
     dream.setToggleState (visualMode == 2, juce::dontSendNotification);
 
-    const juce::String characterName = visualMode == 0 ? "VINTAGE SPRING"
-                                    : visualMode == 1 ? "VOLTAGE SAG" : "HALO";
-    character.setName (characterName);
+    character.setName ("SPRING");
     character.setTooltip (visualMode == 0
         ? "CLASSICUS: vintage spring colour and controlled harmonic drive; no pitch modulation"
         : visualMode == 1
