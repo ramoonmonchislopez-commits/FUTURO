@@ -65,6 +65,7 @@ private:
 
     std::array<float, maxChannels> characterLowpassState {};
     std::array<float, maxChannels> classicusToneState {};
+    std::array<float, maxChannels> fiusoRectifierLowpassState {};
     float voltageSagEnvelope = 0.0f;
     float voltageSagGain = 1.0f;
 
@@ -81,6 +82,9 @@ private:
     float smoothSaturation = 2.0f;
     float smoothCharacter = 0.35f;
     float smoothTone = 0.7f;
+    float smoothInputGain = 1.0f;
+    float smoothOutputGain = 1.0f;
+    float smoothFiuso = 0.0f;
     float smoothMode = 0.0f;
     float parameterSmoothing = 0.002f;
 
