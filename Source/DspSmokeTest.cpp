@@ -255,6 +255,52 @@ int main()
                   << " peak=" << pushedDrive.peak << " latePeak=" << pushedDrive.latePeak << "\n";
     }
 
+    // FIUSO must add a measurable harmonic layer to the wet spring, without instability.
+    {
+        FuturoSpringAudioProcessor plain, fiuso;
+        for (auto* processor : { &plain, &fiuso })
+        {
+            setParameter (*processor, "mix", 1.0f);
+            setParameter (*processor, "intensity", 0.75f);
+            setParameter (*processor, "saturation", 0.0f);
+            setParameter (*processor, "mode", 0.0f);
+            processor->prepareToPlay (testRate, blockSize);
+        }
+        setParameter (fiuso, "fiuso", 1.0f);
+        juce::AudioBuffer<float> a (2, blockSize), b (2, blockSize);
+        juce::MidiBuffer midi;
+        double differenceEnergy = 0.0, referenceEnergy = 0.0;
+        bool finite = true;
+        for (int offset = 0; offset < static_cast<int> (testRate); offset += blockSize)
+        {
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const float sample = 0.22f * std::sin (juce::MathConstants<float>::twoPi
+                    * 220.0f * static_cast<float> (offset + i) / static_cast<float> (testRate));
+                a.setSample (0, i, sample); a.setSample (1, i, sample);
+                b.setSample (0, i, sample); b.setSample (1, i, sample);
+            }
+            plain.processBlock (a, midi);
+            fiuso.processBlock (b, midi);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const double x = a.getSample (0, i), y = b.getSample (0, i);
+                finite = finite && std::isfinite (x) && std::isfinite (y);
+                differenceEnergy += (x - y) * (x - y);
+                referenceEnergy += x * x + y * y;
+            }
+        }
+        const double difference = std::sqrt (differenceEnergy / juce::jmax (1.0e-20, referenceEnergy));
+        if (! finite || difference < 0.001)
+        {
+            std::cerr << "FAIL: FIUSO harmonic layer was inaudible or unstable; difference=" << difference << "\n";
+            return 12;
+        }
+        std::cout << "PASS: FIUSO harmonic layer difference=" << difference << "\n";
+        plain.releaseResources();
+        fiuso.releaseResources();
+    }
+
     // A hot input must remain below digital full scale without using saturation.
     for (int mode = 0; mode < 3; ++mode)
     {
@@ -287,6 +333,7 @@ int main()
         }
         setParameter (dryA, "saturation", 0.0f);
         setParameter (dryB, "saturation", 18.0f);
+        setParameter (dryB, "fiuso", 1.0f);
         dryA.prepareToPlay (testRate, blockSize);
         dryB.prepareToPlay (testRate, blockSize);
         juce::AudioBuffer<float> a (2, blockSize), b (2, blockSize);
@@ -319,6 +366,6 @@ int main()
         dryB.releaseResources();
     }
 
-    std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes, dry pitch lock.\n";
+    std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes, dry pitch lock, FIUSO harmonic layer.\n";
     return 0;
 }
