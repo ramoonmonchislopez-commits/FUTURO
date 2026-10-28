@@ -501,9 +501,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             low += wetPresenceAlpha * (wet[channel] - low);
             auto& body = wetBodyLowpassState[static_cast<size_t> (channel)];
             body += wetBodyAlpha * (wet[channel] - body);
-            // Broad low-mid lift adds body; restrained wet-only shelf preserves pick detail.
+            // Broad low-mid lift adds body. Keep the upper band restrained: Tone opens
+            // the spring naturally without turning the wet return brittle or hyped.
             const float bodyGain = 0.18f + 0.14f * intensityCurve;
-            const float highBandGain = 0.62f + 0.68f * std::pow (smoothTone, 1.10f);
+            const float highBandGain = 0.70f + 0.38f * std::pow (smoothTone, 1.10f);
             wet[channel] = low + (wet[channel] - low) * highBandGain + body * bodyGain;
         }
 
