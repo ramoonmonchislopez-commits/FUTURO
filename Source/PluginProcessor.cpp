@@ -125,6 +125,7 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     wetPresenceLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
     characterLowpassState.fill (0.0f);
+    classicusToneState.fill (0.0f);
     voltageSagEnvelope = 0.0f;
     voltageSagGain = 1.0f;
 
@@ -150,6 +151,7 @@ void FuturoSpringAudioProcessor::releaseResources()
     for (auto& line : diffusers) line.clear();
     for (auto& line : resonators) line.clear();
     characterLowpassState.fill (0.0f);
+    classicusToneState.fill (0.0f);
     voltageSagEnvelope = 0.0f;
     voltageSagGain = 1.0f;
     for (auto& channel : outputDelayBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
@@ -344,8 +346,18 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             // CLASSICUS: controllable vintage spring drive, with no time modulation.
             // The asymmetric transfer adds harmonics while preserving the timing.
             for (int channel = 0; channel < inputChannels; ++channel)
+            {
                 wet[channel] = saturateVintage (wet[channel], 2.0f + 10.0f * character
                                                               + 0.35f * smoothSaturation);
+                // A fixed, character-controlled damping curve gives the vintage
+                // return a real tonal fingerprint without moving the signal in time.
+                const float cutoff = 15000.0f - 10500.0f * character;
+                const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
+                auto& vintage = classicusToneState[static_cast<size_t> (channel)];
+                vintage += alpha * (wet[channel] - vintage);
+                const float blend = 0.42f * character;
+                wet[channel] = wet[channel] * (1.0f - blend) + vintage * blend;
+            }
         }
         else if (modePosition < 1.5f)
         {
