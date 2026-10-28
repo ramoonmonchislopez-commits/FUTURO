@@ -28,8 +28,8 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 
-      - name: Build DSP regression executable
-        run: cmake --build build --config Release --target FUTURO_DSP_SMOKE_TEST --parallel 2
+      - name: Build AU, VST3, and DSP regression targets
+        run: cmake --build build --config Release --target FUTURO_SPRING_AU FUTURO_SPRING_VST3 FUTURO_DSP_SMOKE_TEST --parallel 2
 
       - name: Run DSP regression tests
         run: ./build/FUTURO_DSP_SMOKE_TEST
