@@ -63,6 +63,7 @@ private:
     std::array<float, maxChannels> previousInput {};
 
     std::array<float, maxChannels> characterLowpassState {};
+    std::array<float, maxChannels> classicusToneState {};
     float voltageSagEnvelope = 0.0f;
     float voltageSagGain = 1.0f;
 
