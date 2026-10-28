@@ -96,6 +96,26 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     subheading.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (subheading);
 
+    presetMenu.addItem ("Vintage Bloom", 1);
+    presetMenu.addItem ("Studio Coil", 2);
+    presetMenu.addItem ("Voltage Sag", 3);
+    presetMenu.addItem ("Dark Halo", 4);
+    presetMenu.addItem ("Fiuso Temple", 5);
+    presetMenu.setTextWhenNothingSelected ("FACTORY PRESETS");
+    presetMenu.setTooltip ("Apply a factory starting point. All parameters remain editable and can be saved with the DAW project.");
+    presetMenu.setColour (juce::ComboBox::backgroundColourId, cream);
+    presetMenu.setColour (juce::ComboBox::textColourId, ink);
+    presetMenu.setColour (juce::ComboBox::outlineColourId, ink.withAlpha (0.45f));
+    presetMenu.setColour (juce::ComboBox::arrowColourId, orange);
+    presetMenu.onChange = [this]
+    {
+        const int selectedPreset = presetMenu.getSelectedId();
+        if (selectedPreset > 0)
+            applyPreset (selectedPreset);
+        presetMenu.setSelectedId (0, juce::dontSendNotification);
+    };
+    addAndMakeVisible (presetMenu);
+
     styleKnob (mix, "MIX");
     styleKnob (saturation, "DRIVE");
     saturation.setTooltip ("Mode-specific drive: vintage warmth, power-stage compression, or soft rounded saturation");
@@ -229,6 +249,84 @@ void FuturoSpringAudioProcessorEditor::setMode (int mode)
     for (auto* button : { &classic, &flex, &dream })
         button->setColour (juce::TextButton::buttonOnColourId, accent);
     repaint();
+}
+
+
+void FuturoSpringAudioProcessorEditor::applyPreset (int presetId)
+{
+    // Factory presets are starting points, not locked modes. Every value is sent
+    // through the host parameter API so automation and project-state recall work.
+    const auto setParameter = [this] (const juce::String& parameterID, float value)
+    {
+        if (auto* parameter = processor.parameters.getParameter (parameterID))
+            parameter->setValueNotifyingHost (parameter->convertTo0to1 (value));
+    };
+
+    switch (presetId)
+    {
+        case 1: // Vintage Bloom — rounded, warm spring body.
+            setParameter ("mode", 0.0f);
+            setParameter ("mix", 0.32f);
+            setParameter ("intensity", 0.62f);
+            setParameter ("saturation", 5.0f);
+            setParameter ("character", 65.0f);
+            setParameter ("tone", 0.56f);
+            setParameter ("inputGain", 0.0f);
+            setParameter ("outputGain", -1.0f);
+            setParameter ("fiuso", 0.0f);
+            break;
+
+        case 2: // Studio Coil — short, restrained spring for inserts.
+            setParameter ("mode", 0.0f);
+            setParameter ("mix", 0.19f);
+            setParameter ("intensity", 0.34f);
+            setParameter ("saturation", 2.5f);
+            setParameter ("character", 38.0f);
+            setParameter ("tone", 0.78f);
+            setParameter ("inputGain", 0.0f);
+            setParameter ("outputGain", -0.5f);
+            setParameter ("fiuso", 0.0f);
+            break;
+
+        case 3: // Voltage Sag — more dynamic compression and movement.
+            setParameter ("mode", 1.0f);
+            setParameter ("mix", 0.42f);
+            setParameter ("intensity", 0.72f);
+            setParameter ("saturation", 7.5f);
+            setParameter ("character", 68.0f);
+            setParameter ("tone", 0.72f);
+            setParameter ("inputGain", -2.0f);
+            setParameter ("outputGain", -1.5f);
+            setParameter ("fiuso", 0.0f);
+            break;
+
+        case 4: // Dark Halo — soft, dense, darker wet field.
+            setParameter ("mode", 2.0f);
+            setParameter ("mix", 0.48f);
+            setParameter ("intensity", 0.78f);
+            setParameter ("saturation", 5.5f);
+            setParameter ("character", 82.0f);
+            setParameter ("tone", 0.28f);
+            setParameter ("inputGain", -1.0f);
+            setParameter ("outputGain", -2.0f);
+            setParameter ("fiuso", 0.0f);
+            break;
+
+        case 5: // Fi us o — dense harmonic colour routed only into the wet excitation.
+            setParameter ("mode", 2.0f);
+            setParameter ("mix", 0.54f);
+            setParameter ("intensity", 0.82f);
+            setParameter ("saturation", 6.5f);
+            setParameter ("character", 74.0f);
+            setParameter ("tone", 0.43f);
+            setParameter ("inputGain", -3.0f);
+            setParameter ("outputGain", -2.5f);
+            setParameter ("fiuso", 1.0f);
+            break;
+
+        default:
+            break;
+    }
 }
 
 void FuturoSpringAudioProcessorEditor::timerCallback()
@@ -391,6 +489,7 @@ void FuturoSpringAudioProcessorEditor::resized()
     const int height = getHeight();
     heading.setBounds (36, 22, 300, 48);
     subheading.setBounds (40, 69, 420, 20);
+    presetMenu.setBounds (width - 292, 73, 260, 24);
 
     const int left = 34;
     classic.setBounds (left, 139, 116, 35);
