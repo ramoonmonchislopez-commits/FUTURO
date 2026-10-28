@@ -4,9 +4,9 @@ Expressive spring reverb for macOS (Apple Silicon + Intel). Classicus brings a s
 
 ## Status
 
-Version 0.11.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
+Version 0.12.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
 
-The three modes are **Classicus** (rounded, zero-centred vintage drive), **Novus** (power-stage compression plus Voltage Sag: amplitude dip and recovery), and **Somnium** (soft peak rounding with a dark, wet-field halo). Drive uses a different smooth, bounded saturation curve per mode and remains wet-only. Mode-specific colours are crossfaded continuously; the dry path is not saturated, pitch-modulated, time-shifted or filtered. Intensity controls decay and wet presence, while Tone shapes the wet return.
+The three modes are **Classicus / Spring** (rounded, zero-centred vintage drive), **Novus / Sag** (power-stage compression plus Voltage Sag: amplitude dip and recovery), and **Somnium / Halo** (soft peak rounding with a dark, wet-field halo). Drive uses a different smooth, bounded saturation curve per mode and remains wet-only. The mode-dependent Character control is explicitly labelled Spring, Sag, or Halo. The small **IN** and **OUT** faders provide smoothed input/output trim. The central **FIUSO** switch adds a DC-blocked, octave-up harmonic texture to the spring excitation; the dry path stays free of this generated layer. Mode-specific colours are crossfaded continuously; the dry path is not pitch-modulated or time-shifted. Intensity controls decay and wet presence, while Tone shapes the wet return.
 
 ## Build on macOS
 
