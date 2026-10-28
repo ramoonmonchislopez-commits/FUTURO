@@ -9,6 +9,13 @@ public:
     void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height,
                            float sliderPosProportional, float rotaryStartAngle,
                            float rotaryEndAngle, juce::Slider&) override;
+    void drawButtonBackground (juce::Graphics&, juce::Button&, const juce::Colour& backgroundColour,
+                               bool isMouseOverButton, bool isButtonDown) override;
+    void drawButtonText (juce::Graphics&, juce::TextButton&,
+                         bool isMouseOverButton, bool isButtonDown) override;
+    void drawComboBox (juce::Graphics&, int width, int height, bool isButtonDown,
+                       int buttonX, int buttonY, int buttonW, int buttonH,
+                       juce::ComboBox&) override;
 };
 
 class FuturoSpringAudioProcessorEditor : public juce::AudioProcessorEditor,

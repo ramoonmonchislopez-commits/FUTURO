@@ -39,7 +39,7 @@ namespace
             return;
 
         std::uint32_t state = seed;
-        const auto nextUnit = [&state]() mutable
+        const auto nextUnit = [&state]()
         {
             state = state * 1664525u + 1013904223u;
             return static_cast<float> ((state >> 8) & 0x00ffffffu) / 16777215.0f;
@@ -76,7 +76,7 @@ namespace
         drawChalkTexture (g, board, orange, 0x53504954u, 1500, 0.085f);
 
         std::uint32_t state = 0x56494e54u;
-        const auto nextUnit = [&state]() mutable
+        const auto nextUnit = [&state]()
         {
             state = state * 1103515245u + 12345u;
             return static_cast<float> ((state >> 8) & 0x00ffffffu) / 16777215.0f;
@@ -610,7 +610,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
                 juce::Justification::centredRight);
 
     // Technical target marks around the characters.
-    const float cx = width * 0.595f;
+    const float cx = width * 0.56f;
     const float cy = 246.0f;
     const float ringBreath = 1.0f + 0.025f * breathe * (0.25f + mood);
     const float ringW = (216.0f + mood * 38.0f) * ringBreath;
@@ -739,7 +739,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
         g.setColour (teal.withAlpha (0.92f));
         g.strokePath (oxygenHose, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
-        drawChalkTexture (g, blueBody, blue, 0x4d4f4445u, 80, 0.10f);
+        
     }
 
     // NOVUS is marked by unmistakable bat wings; other modes keep the
