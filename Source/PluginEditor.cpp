@@ -103,6 +103,10 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
 
+    classic.setButtonText ("CLASSICUS");
+    flex.setButtonText ("NOVUS");
+    dream.setButtonText ("SOMNIUM");
+
     for (auto* button : { &classic, &flex, &dream })
     {
         button->setClickingTogglesState (true);
