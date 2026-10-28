@@ -4,9 +4,9 @@ Expressive spring reverb for macOS (Apple Silicon + Intel). Classicus brings a s
 
 ## Status
 
-Version 0.11.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
+Version 0.12.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
 
-The three modes are **Classicus** (rounded, zero-centred vintage drive), **Novus** (power-stage compression plus Voltage Sag: amplitude dip and recovery), and **Somnium** (soft peak rounding with a dark, wet-field halo). Drive uses a different smooth, bounded saturation curve per mode and remains wet-only. Mode-specific colours are crossfaded continuously; the dry path is not saturated, pitch-modulated, time-shifted or filtered. Intensity controls decay and wet presence, while Tone shapes the wet return.
+The three modes are **Classicus** (rounded vintage spring harmonics; the special control is **Spring**), **Novus** (power-stage compression plus Voltage Sag: amplitude dip and recovery; the special control is **Sag**), and **Somnium** (soft peak rounding with a dark, wet-field halo; the special control is **Halo**). Mode-specific colour is crossfaded continuously. **IN** and **OUT** are smoothed, automatable gain trims. **Fiuso** adds a parallel upper-harmonic texture with second- and third-harmonic content; it does not move delay times or modulate the dry path's pitch. Intensity controls decay and wet presence, while Tone shapes the spring return.
 
 ## Build on macOS
 
@@ -22,11 +22,11 @@ The workflow at .github/workflows/macos-build.yml builds on GitHub-hosted macOS 
 
 ## DSP validation
 
-The automated DSP suite covers finite output, stable decay, mode differentiation, Character and Tone response, mode-specific Drive response, output headroom, dry-path pitch lock, and dry-path isolation from Drive.
+The automated DSP suite covers finite output, stable decay, mode differentiation, Character and Tone response, mode-specific Drive response, Fiuso's measurable parallel harmonic layer, output headroom, dry-path pitch lock, and dry-path isolation from Drive.
 
 ## Validation needed
 
-A successful compilation is not proof of commercial audio quality. The plug-in must still be listened to and validated in the intended DAW, including automation, preset/state recall, tail stability, CPU usage and different sample rates/buffer sizes. The vintage nonlinear stage is not oversampled, so strong drive can still generate aliasing. Objective tests cannot replace listening in the target DAW. The test installer is unsigned and not notarized.
+A successful compilation is not proof of commercial audio quality. The plug-in must still be listened to and validated in the intended DAW, including automation, preset/state recall, tail stability, CPU usage and different sample rates/buffer sizes. The nonlinear stages are not oversampled, so extreme drive or Fiuso settings can still generate some aliasing. Fiuso is a harmonics-based texture layer, not a pitch-tracking polyphonic harmonizer; objective tests cannot replace listening in the target DAW. The test installer is unsigned and not notarized.
 
 ## Installation locations
 
