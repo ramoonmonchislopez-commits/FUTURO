@@ -58,7 +58,8 @@ float FuturoSpringAudioProcessor::DelayLine::read() const noexcept
 void FuturoSpringAudioProcessor::DelayLine::write (float sample) noexcept
 {
     if (data.empty()) return;
-    data[writeIndex] = sample;
+    // Never let a non-finite sample poison a whole delay line and its feedback tail.
+    data[writeIndex] = std::isfinite (sample) ? sample : 0.0f;
     if (++writeIndex >= data.size()) writeIndex = 0;
 }
 
@@ -508,8 +509,11 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         const float mix = juce::jlimit (0.0f, 1.0f, smoothMix);
         const float dryGain = std::cos (0.5f * juce::MathConstants<float>::pi * mix);
         const float wetGain = std::sin (0.5f * juce::MathConstants<float>::pi * mix);
-        const float rawOutL = (dryL * dryGain + wetL * wetGain) * smoothOutputGain;
-        const float rawOutR = (dryR * dryGain + wetR * wetGain) * smoothOutputGain;
+        const float calculatedOutL = (dryL * dryGain + wetL * wetGain) * smoothOutputGain;
+        const float calculatedOutR = (dryR * dryGain + wetR * wetGain) * smoothOutputGain;
+        // Final containment: an invalid sample must never escape into the host output.
+        const float rawOutL = std::isfinite (calculatedOutL) ? calculatedOutL : 0.0f;
+        const float rawOutR = std::isfinite (calculatedOutR) ? calculatedOutR : 0.0f;
 
         // Linked, lookahead peak control prevents clipping without adding saturation.
         const float peakNow = juce::jmax (std::abs (rawOutL), std::abs (rawOutR));
