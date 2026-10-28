@@ -396,7 +396,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
                                + breathe * (0.004f + intensityValue * 0.012f);
     const float bob = pulse * (1.0f + intensityValue * 4.2f);
     const float wingOpen = 0.91f + intensityValue * 0.15f + std::sin (animPhase * 1.3f) * 0.018f;
-    juce::Graphics::ScopedSaveState saved (g);
+    g.saveState();
     g.addTransform (juce::AffineTransform (characterScale, 0.0f, cx,
                                            0.0f, characterScale, cy + bob));
 
@@ -557,7 +557,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
         g.setColour (cream);
         g.drawLine (48.0f, 129.0f, 48.0f, 145.0f, 0.9f);
     }
-    saved.~ScopedSaveState();
+    g.restoreState();
 
     const juce::String modeName = visualMode == 0 ? "CLASSICUS"
                                 : visualMode == 1 ? "NOVUS" : "SOMNIUM";
