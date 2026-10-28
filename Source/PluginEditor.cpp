@@ -366,10 +366,10 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     // The pair is upright, based on the artist's own sketch: green angel
     // embracing the taller blue angel, with the pink and charcoal wings retained.
     const float cx = getWidth() * 0.575f;
-    const float cy = 241.0f;
+    const float cy = 230.0f;
     const float ringBreath = 1.0f + 0.025f * breathe * (0.25f + intensityValue);
-    const float ringW = (174.0f + intensityValue * 42.0f) * ringBreath;
-    const float ringH = (194.0f + intensityValue * 48.0f) * ringBreath;
+    const float ringW = (150.0f + intensityValue * 35.0f) * ringBreath;
+    const float ringH = (154.0f + intensityValue * 28.0f) * ringBreath;
 
     for (int i = 2; i >= 0; --i)
     {
@@ -392,8 +392,8 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
                        cy + std::sin (a) * orbitRy - dot * 0.5f, dot, dot);
     }
 
-    const float characterScale = 0.77f + intensityValue * 0.19f
-                               + breathe * (0.004f + intensityValue * 0.012f);
+    const float characterScale = 0.72f + intensityValue * 0.17f
+                               + breathe * (0.003f + intensityValue * 0.010f);
     const float bob = pulse * (1.0f + intensityValue * 4.2f);
     const float wingOpen = 0.91f + intensityValue * 0.15f + std::sin (animPhase * 1.3f) * 0.018f;
     g.saveState();
@@ -547,15 +547,15 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
     if (fiuso.getToggleState())
     {
         juce::Path jewel;
-        jewel.startNewSubPath (48.0f, 126.0f);
-        jewel.lineTo (56.0f, 137.0f);
-        jewel.lineTo (48.0f, 149.0f);
-        jewel.lineTo (40.0f, 137.0f);
+        jewel.startNewSubPath (48.0f, 115.0f);
+        jewel.lineTo (55.0f, 125.0f);
+        jewel.lineTo (48.0f, 135.0f);
+        jewel.lineTo (41.0f, 125.0f);
         jewel.closeSubPath();
         g.setColour (orange.withAlpha (0.85f));
         g.fillPath (jewel);
         g.setColour (cream);
-        g.drawLine (48.0f, 129.0f, 48.0f, 145.0f, 0.9f);
+        g.drawLine (48.0f, 118.0f, 48.0f, 132.0f, 0.9f);
     }
     g.restoreState();
 
