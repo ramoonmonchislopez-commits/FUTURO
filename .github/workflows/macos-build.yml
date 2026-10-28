@@ -86,19 +86,19 @@ jobs:
         run: |
           test -d 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3'
           test -d 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component'
-          test -f 'dist/Spiritus-Spring-Reverb-0.12.0-universal.pkg'
+          test -f 'dist/Spiritus-Spring-Reverb-0.12.1-universal.pkg'
           lipo 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3/Contents/MacOS/Spiritus Spring Reverb' -verify_arch arm64 x86_64
           lipo 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component/Contents/MacOS/Spiritus Spring Reverb' -verify_arch arm64 x86_64
           codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3'
           codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component'
-          pkgutil --payload-files 'dist/Spiritus-Spring-Reverb-0.12.0-universal.pkg' | grep -E 'Audio/Plug-Ins/(VST3|Components)/Spiritus Spring Reverb' >/dev/null
+          pkgutil --payload-files 'dist/Spiritus-Spring-Reverb-0.12.1-universal.pkg' | grep -E 'Audio/Plug-Ins/(VST3|Components)/Spiritus Spring Reverb' >/dev/null
 
       - name: Archive plug-ins and checksums
         run: |
           mkdir -p dist/artifacts
-          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3' 'dist/artifacts/Spiritus-Spring-Reverb-VST3-v0.12.0-universal.zip'
-          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component' 'dist/artifacts/Spiritus-Spring-Reverb-AU-v0.12.0-universal.zip'
-          cp 'dist/Spiritus-Spring-Reverb-0.12.0-universal.pkg' dist/artifacts/
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3' 'dist/artifacts/Spiritus-Spring-Reverb-VST3-v0.12.1-universal.zip'
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component' 'dist/artifacts/Spiritus-Spring-Reverb-AU-v0.12.1-universal.zip'
+          cp 'dist/Spiritus-Spring-Reverb-0.12.1-universal.pkg' dist/artifacts/
           cd dist/artifacts
           shasum -a 256 ./* > SHA256SUMS.txt
           cat SHA256SUMS.txt
@@ -106,7 +106,7 @@ jobs:
       - name: Upload verified build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Spiritus-Spring-Reverb-macOS-v0.12.0-universal
+          name: Spiritus-Spring-Reverb-macOS-v0.12.1-universal
           path: dist/artifacts/*
           if-no-files-found: error
           retention-days: 30
