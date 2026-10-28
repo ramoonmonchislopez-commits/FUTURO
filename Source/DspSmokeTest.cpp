@@ -507,10 +507,10 @@ int main()
                 finite = finite && std::isfinite (buffer.getSample (channel, i));
         if (! finite)
         {
-            std::cerr << "FAIL: invalid input poisoned DSP output or subsequent state\\n";
+            std::cerr << "FAIL: invalid input poisoned DSP output or subsequent state\n";
             return 17;
         }
-        std::cout << "PASS: invalid host samples contained; DSP state remains finite\\n";
+        std::cout << "PASS: invalid host samples contained; DSP state remains finite\n";
         processor.releaseResources();
     }
 
@@ -559,11 +559,11 @@ int main()
         if (! finite || peak > 0.985f)
         {
             std::cerr << "FAIL: parameter automation/mode changes caused invalid or excessive output; peak="
-                      << peak << "\\n";
+                      << peak << "\n";
             return 18;
         }
         std::cout << "PASS: Character/Tone/Mode/Fiuso automation finite and bounded; peak="
-                  << peak << "\\n";
+                  << peak << "\n";
         processor.releaseResources();
     }
 
