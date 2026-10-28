@@ -54,8 +54,8 @@ jobs:
           PLUGINVAL="$(find pluginval-dist -path '*/Contents/MacOS/pluginval' -type f -print -quit)"
           test -n "$PLUGINVAL"
           chmod +x "$PLUGINVAL"
-          VST3="$(find build-macos -type d -name 'FUTURO Spring Reverb.vst3' -print -quit)"
-          AU_BUILD="$(find build-macos -type d -name 'FUTURO Spring Reverb.component' -print -quit)"
+          VST3="$(find build-macos -type d -name 'Spiritus Spring Reverb.vst3' -print -quit)"
+          AU_BUILD="$(find build-macos -type d -name 'Spiritus Spring Reverb.component' -print -quit)"
           test -n "$VST3"
           test -n "$AU_BUILD"
           mkdir -p dist/pluginval-logs
@@ -64,7 +64,7 @@ jobs:
           # Audio Units are registered by macOS from a standard Components folder.
           # A bundle in CMake's build tree cannot be discovered by AudioComponent APIs.
           AU_DIR="$HOME/Library/Audio/Plug-Ins/Components"
-          AU="$AU_DIR/FUTURO Spring Reverb.component"
+          AU="$AU_DIR/Spiritus Spring Reverb.component"
           mkdir -p "$AU_DIR"
           rm -rf "$AU"
           cp -R "$AU_BUILD" "$AU"
@@ -77,28 +77,28 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: FUTURO-pluginval-diagnostics
+          name: Spiritus-pluginval-diagnostics
           path: dist/pluginval-logs/
           if-no-files-found: ignore
           retention-days: 14
 
       - name: Verify universal bundles and installer
         run: |
-          test -d 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3'
-          test -d 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component'
-          test -f 'dist/FUTURO-Spring-Reverb-0.9.0-universal.pkg'
-          lipo 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3/Contents/MacOS/FUTURO Spring Reverb' -verify_arch arm64 x86_64
-          lipo 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component/Contents/MacOS/FUTURO Spring Reverb' -verify_arch arm64 x86_64
-          codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3'
-          codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component'
-          pkgutil --payload-files 'dist/FUTURO-Spring-Reverb-0.9.0-universal.pkg' | grep -E 'Audio/Plug-Ins/(VST3|Components)/FUTURO Spring Reverb' >/dev/null
+          test -d 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3'
+          test -d 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component'
+          test -f 'dist/Spiritus-Spring-Reverb-0.10.0-universal.pkg'
+          lipo 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3/Contents/MacOS/Spiritus Spring Reverb' -verify_arch arm64 x86_64
+          lipo 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component/Contents/MacOS/Spiritus Spring Reverb' -verify_arch arm64 x86_64
+          codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3'
+          codesign --verify --deep --strict --verbose=2 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component'
+          pkgutil --payload-files 'dist/Spiritus-Spring-Reverb-0.10.0-universal.pkg' | grep -E 'Audio/Plug-Ins/(VST3|Components)/Spiritus Spring Reverb' >/dev/null
 
       - name: Archive plug-ins and checksums
         run: |
           mkdir -p dist/artifacts
-          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3' 'dist/artifacts/FUTURO-Spring-Reverb-VST3-v0.9.0-universal.zip'
-          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component' 'dist/artifacts/FUTURO-Spring-Reverb-AU-v0.9.0-universal.zip'
-          cp 'dist/FUTURO-Spring-Reverb-0.9.0-universal.pkg' dist/artifacts/
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3' 'dist/artifacts/Spiritus-Spring-Reverb-VST3-v0.10.0-universal.zip'
+          ditto -c -k --sequesterRsrc --keepParent 'dist/pkgroot/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component' 'dist/artifacts/Spiritus-Spring-Reverb-AU-v0.10.0-universal.zip'
+          cp 'dist/Spiritus-Spring-Reverb-0.10.0-universal.pkg' dist/artifacts/
           cd dist/artifacts
           shasum -a 256 ./* > SHA256SUMS.txt
           cat SHA256SUMS.txt
@@ -106,7 +106,7 @@ jobs:
       - name: Upload verified build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FUTURO-Spring-Reverb-macOS-v0.9.0-universal
+          name: Spiritus-Spring-Reverb-macOS-v0.10.0-universal
           path: dist/artifacts/*
           if-no-files-found: error
           retention-days: 30

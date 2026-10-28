@@ -14,8 +14,8 @@ namespace
     constexpr float diffuserTimes[modeCount][diffuserCount] =
     {
         { 0.0047f, 0.0073f, 0.0109f, 0.0133f }, // CLASSIC
-        { 0.0017f, 0.0029f, 0.0043f, 0.0061f }, // DRIP
-        { 0.0091f, 0.0147f, 0.0203f, 0.0271f }  // DREAM
+        { 0.0017f, 0.0029f, 0.0043f, 0.0061f }, // NOVUS
+        { 0.0091f, 0.0147f, 0.0203f, 0.0271f }  // SOMNIUM
     };
     constexpr float resonatorTimes[modeCount][resonatorCount] =
     {
@@ -123,6 +123,7 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
     dampingState.fill (0.0f);
     wetPresenceLowpassState.fill (0.0f);
+    wetBodyLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
     characterLowpassState.fill (0.0f);
     classicusToneState.fill (0.0f);
@@ -159,6 +160,7 @@ void FuturoSpringAudioProcessor::releaseResources()
     resonatorDamping.fill (0.0f);
     dampingState.fill (0.0f);
     wetPresenceLowpassState.fill (0.0f);
+    wetBodyLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
 }
 
@@ -219,10 +221,11 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float fs = static_cast<float> (currentSampleRate);
     const float inputLPAlpha = 1.0f - std::exp (-twoPi * 2300.0f / fs);
     const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1300.0f / fs);
+    const float wetBodyAlpha = 1.0f - std::exp (-twoPi * 420.0f / fs);
     const float sagEnvelopeAttack = 1.0f - std::exp (-1.0f / (0.00015f * fs));
     const float sagEnvelopeRelease = 1.0f - std::exp (-1.0f / (0.220f * fs));
-    const float sagGainAttack = 1.0f - std::exp (-1.0f / (0.006f * fs));
-    const float sagGainRelease = 1.0f - std::exp (-1.0f / (0.180f * fs));
+    const float sagGainAttack = 1.0f - std::exp (-1.0f / (0.004f * fs));
+    const float sagGainRelease = 1.0f - std::exp (-1.0f / (0.240f * fs));
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -232,6 +235,9 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         smoothCharacter += parameterSmoothing * (targetCharacter - smoothCharacter);
         smoothTone += parameterSmoothing * (targetTone - smoothTone);
         smoothMode += parameterSmoothing * (targetMode - smoothMode);
+
+        // Log-style taper gives Intensity more useful travel in the upper half.
+        const float intensityCurve = std::pow (juce::jlimit (0.0f, 1.0f, smoothIntensity), 0.72f);
 
         const float dryL = buffer.getSample (0, n);
         const float dryR = inputChannels > 1 ? buffer.getSample (1, n) : dryL;
@@ -267,11 +273,11 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const float diffuserCoefficient = mode == 0 ? 0.68f : mode == 1 ? 0.39f : 0.79f;
                 const float diffused = processDiffuser (channel, mode, source, diffuserCoefficient);
 
-                // All loop gains are bounded. Even at maximum INTENSITY the per-loop
-                // gain stays comfortably below unity, so tails decay instead of building.
-                const float feedback = mode == 0 ? (0.52f + 0.32f * smoothIntensity)
-                                     : mode == 1 ? (0.50f + 0.34f * smoothIntensity)
-                                                 : (0.56f + 0.27f * smoothIntensity);
+                // INTENSITY moves the useful decay range more decisively, while all
+                // loop feedback stays below unity to keep the spring tail stable.
+                const float feedback = mode == 0 ? (0.48f + 0.39f * intensityCurve)
+                                     : mode == 1 ? (0.46f + 0.40f * intensityCurve)
+                                                 : (0.50f + 0.34f * intensityCurve);
                 const float excitation = mode == 0 ? 0.24f : mode == 1 ? 0.38f : 0.19f;
                 const float highFeedback = mode == 0 ? 0.38f : mode == 1 ? 0.86f : 0.16f;
                 const float crossFeedback = mode == 0 ? 0.035f : mode == 1 ? 0.095f : 0.045f;
@@ -312,10 +318,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 // Bring the spring tail forward without increasing loop feedback,
                 // which previously made the reverb accumulate and turn muddy.
                 // Presence comes from excitation and tone, not brute-force output gain.
-                const float modeGain = mode == 0 ? (1.32f + 0.28f * smoothIntensity)
-                                      : mode == 1 ? (1.48f + 0.30f * smoothIntensity)
-                                                  : (1.08f + 0.20f * smoothIntensity);
-                const float earlyGain = mode == 0 ? 0.20f : mode == 1 ? 0.21f : 0.23f;
+                const float modeGain = mode == 0 ? (1.48f + 0.38f * intensityCurve)
+                                      : mode == 1 ? (1.58f + 0.45f * intensityCurve)
+                                                  : (1.18f + 0.30f * intensityCurve);
+                const float earlyGain = mode == 0 ? 0.24f : mode == 1 ? 0.26f : 0.26f;
                 const float tail = output * modeGain;
                 wetTailByMode[mode][channel] = mode == 0
                     ? saturateVintage (tail, 4.0f + smoothSaturation * 1.1f)
@@ -347,15 +353,17 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             // The asymmetric transfer adds harmonics while preserving the timing.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
-                wet[channel] = saturateVintage (wet[channel], 2.0f + 10.0f * character
-                                                              + 0.35f * smoothSaturation);
-                // A fixed, character-controlled damping curve gives the vintage
-                // return a real tonal fingerprint without moving the signal in time.
-                const float cutoff = 15000.0f - 10500.0f * character;
+                const float characterCurve = std::pow (character, 0.80f);
+                // More asymmetrical drive makes the vintage spring signature audible
+                // at normal levels without adding wow/flutter or touching the dry path.
+                wet[channel] = saturateVintage (wet[channel] * (1.0f + 0.42f * character),
+                                                3.0f + 14.5f * characterCurve + 0.35f * smoothSaturation);
+                // Fixed character-controlled damping gives a rounded vintage return.
+                const float cutoff = 14000.0f - 9000.0f * character;
                 const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
                 auto& vintage = classicusToneState[static_cast<size_t> (channel)];
                 vintage += alpha * (wet[channel] - vintage);
-                const float blend = 0.42f * character;
+                const float blend = 0.58f * character;
                 wet[channel] = wet[channel] * (1.0f - blend) + vintage * blend;
             }
         }
@@ -367,8 +375,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             const float envelopeCoefficient = inputPeak > voltageSagEnvelope
                                             ? sagEnvelopeAttack : sagEnvelopeRelease;
             voltageSagEnvelope += envelopeCoefficient * (inputPeak - voltageSagEnvelope);
-            const float normalizedLoad = voltageSagEnvelope / (voltageSagEnvelope + 0.22f);
-            const float sagTarget = 1.0f - 0.48f * character * normalizedLoad;
+            const float normalizedLoad = voltageSagEnvelope / (voltageSagEnvelope + 0.16f);
+            const float characterDepth = std::pow (character, 0.76f);
+            // Deeper supply droop and slower recovery give Novus its audible sag/bloom.
+            const float sagTarget = 1.0f - 0.68f * characterDepth * normalizedLoad;
             const float sagCoefficient = sagTarget < voltageSagGain ? sagGainAttack : sagGainRelease;
             voltageSagGain += sagCoefficient * (sagTarget - voltageSagGain);
             for (int channel = 0; channel < inputChannels; ++channel)
@@ -389,9 +399,14 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             }
         }
 
+        // Lift the wet return after its signature: the direct path stays untouched.
+        const float reverbOutputGain = 1.18f + 0.32f * intensityCurve;
+        for (int channel = 0; channel < inputChannels; ++channel)
+            wet[channel] *= reverbOutputGain;
+
         // Tone affects only the spring return and never enters a feedback loop.
 
-        // DREAM widens only the recombined wet field while keeping the centre stable.
+        // SOMNIUM widens only the recombined wet field while keeping the centre stable.
         if (inputChannels > 1 && modePosition > 1.0f)
         {
             const float mid = 0.5f * (wet[0] + wet[1]);
@@ -407,9 +422,12 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             auto& low = wetPresenceLowpassState[static_cast<size_t> (channel)];
             low += wetPresenceAlpha * (wet[channel] - low);
-            // Musical dark-to-bright shelf with limited high-band boost for headroom.
-            const float highBandGain = 0.28f + 1.18f * std::pow (smoothTone, 1.10f);
-            wet[channel] = low + (wet[channel] - low) * highBandGain;
+            auto& body = wetBodyLowpassState[static_cast<size_t> (channel)];
+            body += wetBodyAlpha * (wet[channel] - body);
+            // Broad low-mid lift adds body; restrained wet-only shelf preserves pick detail.
+            const float bodyGain = 0.18f + 0.14f * intensityCurve;
+            const float highBandGain = 0.62f + 0.68f * std::pow (smoothTone, 1.10f);
+            wet[channel] = low + (wet[channel] - low) * highBandGain + body * bodyGain;
         }
 
         const float wetL = wet[0];

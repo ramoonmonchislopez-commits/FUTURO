@@ -1,10 +1,10 @@
-# FUTURO — SPRING REVERB
+# SPIRITUS — SPRING REVERB
 
-Creative spring-inspired reverb plug-in for macOS Apple Silicon.
+Expressive spring reverb for macOS (Apple Silicon + Intel). Classicus brings a stronger vintage spring voice, Novus has a more audible voltage-sag dip and recovery, and Somnium keeps a dark, enveloping halo. Intensity reaches longer decay and more body/presence on the wet return, while the direct path remains uncoloured.
 
 ## Status
 
-Version 0.9.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
+Version 0.10.0 is an engineering build. GitHub Actions builds and validates VST3 and Audio Unit on a native macOS ARM64 runner. The code targets JUCE 9.0.4.
 
 The three modes are **Classicus** (vintage spring harmonics), **Novus** (Voltage Sag: amplitude dip and recovery), and **Somnium** (dark, soft wet-field halo). Character effects work only on the reverberated return: they do not modulate delay time or pitch, and the direct path remains unshifted and unfiltered. The wet field can still be coloured by Tone and each mode’s spring network.
 
@@ -26,7 +26,7 @@ A successful compilation is not proof of commercial audio quality. The plug-in m
 
 ## Installation locations
 
-- /Library/Audio/Plug-Ins/VST3/FUTURO Spring Reverb.vst3
-- /Library/Audio/Plug-Ins/Components/FUTURO Spring Reverb.component
+- /Library/Audio/Plug-Ins/VST3/SPIRITUS Spring Reverb.vst3
+- /Library/Audio/Plug-Ins/Components/SPIRITUS Spring Reverb.component
 
 Quit the DAW before installing and restart it afterward. Use scripts/uninstall_macos.sh to remove the plug-in bundles.

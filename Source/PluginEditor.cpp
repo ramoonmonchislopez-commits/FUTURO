@@ -84,7 +84,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     setResizeLimits (860, 620, 1240, 840);
     setLookAndFeel (&knobLookAndFeel);
 
-    heading.setText ("FUTURO", juce::dontSendNotification);
+    heading.setText ("SPIRITUS", juce::dontSendNotification);
     heading.setFont (juce::Font (juce::FontOptions (41.0f, juce::Font::bold)));
     heading.setColour (juce::Label::textColourId, ink);
     heading.setJustificationType (juce::Justification::centredLeft);
@@ -99,6 +99,7 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     styleKnob (mix, "MIX");
     styleKnob (saturation, "VINTAGE DRIVE");
     styleKnob (intensity, "INTENSITY");
+    intensity.setTooltip ("More reverb body and a longer spring decay; the upper range pushes harder");
     styleKnob (character, "VINTAGE SPRING");
     character.setTextValueSuffix (" %");
     styleKnob (tone, "TONE");
@@ -331,7 +332,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (ink);
     g.setFont (juce::Font (juce::FontOptions (10.5f, juce::Font::bold)));
-    g.drawText ("SPRING SPIRIT  /  " + juce::String (visualMode == 0 ? "CLASSICUS" : visualMode == 1 ? "NOVUS" : "SOMNIUM"),
+    g.drawText ("SPIRITUS  /  " + juce::String (visualMode == 0 ? "CLASSICUS" : visualMode == 1 ? "NOVUS" : "SOMNIUM"),
                 0, 366, getWidth(), 18, juce::Justification::centred);
 
     g.setColour (ink.withAlpha (0.34f));
@@ -342,7 +343,7 @@ void FuturoSpringAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (ink.withAlpha (0.62f));
     g.setFont (juce::Font (juce::FontOptions (8.5f)));
-    g.drawText ("FUTURO AUDIO LAB  /  MONO + STEREO", 30, getHeight() - 31, 260, 14,
+    g.drawText ("SPIRITUS AUDIO  /  MONO + STEREO", 30, getHeight() - 31, 260, 14,
                 juce::Justification::centredLeft);
 }
 

@@ -60,6 +60,7 @@ private:
     std::array<float, maxChannels * numModes * numResonators> resonatorDamping {};
     std::array<float, maxChannels> dampingState {};
     std::array<float, maxChannels> wetPresenceLowpassState {};
+    std::array<float, maxChannels> wetBodyLowpassState {};
     std::array<float, maxChannels> previousInput {};
 
     std::array<float, maxChannels> characterLowpassState {};

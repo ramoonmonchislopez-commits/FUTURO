@@ -6,7 +6,7 @@ BUILD_DIR="$ROOT/build-macos"
 ARCHS="arm64;x86_64"
 ARCH_LABEL="universal"
 DEPLOYMENT_TARGET="11.0"
-VERSION="0.9.0"
+VERSION="0.10.0"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "ERROR: this script must run on macOS." >&2
@@ -28,8 +28,8 @@ cmake -S "$ROOT" -B "$BUILD_DIR" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
 cmake --build "$BUILD_DIR" --config Release --parallel "$(sysctl -n hw.ncpu)"
 
-VST3_PATH="$(find "$BUILD_DIR" -type d -name 'FUTURO Spring Reverb.vst3' -print -quit)"
-AU_PATH="$(find "$BUILD_DIR" -type d -name 'FUTURO Spring Reverb.component' -print -quit)"
+VST3_PATH="$(find "$BUILD_DIR" -type d -name 'Spiritus Spring Reverb.vst3' -print -quit)"
+AU_PATH="$(find "$BUILD_DIR" -type d -name 'Spiritus Spring Reverb.component' -print -quit)"
 if [[ -z "$VST3_PATH" || ! -d "$VST3_PATH" ]]; then
   echo "ERROR: build completed but VST3 bundle was not found." >&2
   exit 3
@@ -47,8 +47,8 @@ codesign --verify --deep --strict --verbose=2 "$VST3_PATH"
 codesign --verify --deep --strict --verbose=2 "$AU_PATH"
 
 # Assert that both architectures are actually present before packaging.
-VST3_BINARY="$VST3_PATH/Contents/MacOS/FUTURO Spring Reverb"
-AU_BINARY="$AU_PATH/Contents/MacOS/FUTURO Spring Reverb"
+VST3_BINARY="$VST3_PATH/Contents/MacOS/Spiritus Spring Reverb"
+AU_BINARY="$AU_PATH/Contents/MacOS/Spiritus Spring Reverb"
 for binary in "$VST3_BINARY" "$AU_BINARY"; do
   [[ -f "$binary" ]] || { echo "ERROR: missing binary: $binary" >&2; exit 3; }
   file "$binary"
@@ -63,18 +63,18 @@ cp -R "$VST3_PATH" "$PKGROOT/Library/Audio/Plug-Ins/VST3/"
 cp -R "$AU_PATH" "$PKGROOT/Library/Audio/Plug-Ins/Components/"
 
 mkdir -p "$ROOT/dist"
-PKG="$ROOT/dist/FUTURO-Spring-Reverb-$VERSION-$ARCH_LABEL.pkg"
+PKG="$ROOT/dist/Spiritus-Spring-Reverb-$VERSION-$ARCH_LABEL.pkg"
 rm -f "$PKG"
 pkgbuild \
   --root "$PKGROOT" \
-  --identifier "audio.futuro.springreverb.pkg" \
+  --identifier "audio.spiritus.springreverb.pkg" \
   --version "$VERSION" \
   --install-location / \
   --ownership recommended \
   "$PKG"
 
 pkgutil --check-signature "$PKG" || true
-pkgutil --payload-files "$PKG" | grep -E 'Audio/Plug-Ins/(VST3|Components)/FUTURO Spring Reverb' >/dev/null || {
+pkgutil --payload-files "$PKG" | grep -E 'Audio/Plug-Ins/(VST3|Components)/Spiritus Spring Reverb' >/dev/null || {
   echo "ERROR: installer payload does not contain the expected plug-in bundles." >&2
   exit 4
 }
