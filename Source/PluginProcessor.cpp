@@ -30,13 +30,6 @@ namespace
         { 0.25f, 0.22f, 0.19f, 0.16f }
     };
 
-    int wrapIndex (int index, int size) noexcept
-    {
-        while (index < 0) index += size;
-        while (index >= size) index -= size;
-        return index;
-    }
-
     size_t diffuserIndex (int channel, int mode, int stage) noexcept
     {
         return static_cast<size_t> (mode * 2 * diffuserCount + channel * diffuserCount + stage);
@@ -91,7 +84,7 @@ FuturoSpringAudioProcessor::APVTS::ParameterLayout FuturoSpringAudioProcessor::c
     p.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "tone", 1 }, "Tone / Damping",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.7f));
     p.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "mode", 1 }, "Mode",
-        juce::StringArray { "CLASSIC", "FLEX", "DREAM" }, 0));
+        juce::StringArray { "Classicus", "Novus", "Somnium" }, 0));
     return p;
 }
 
@@ -131,13 +124,9 @@ void FuturoSpringAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     dampingState.fill (0.0f);
     wetPresenceLowpassState.fill (0.0f);
     previousInput.fill (0.0f);
-    // Short moving buffers support WOBBLE, DOUBLER/FLANGER and MAGIC voices.
-    characterBufferSize = static_cast<size_t> (juce::jmax (512, juce::roundToInt (fs * 0.120f) + 8));
-    for (auto& channel : characterBuffers) channel.assign (characterBufferSize, 0.0f);
-    characterWritePosition = 0;
-    characterPhase = 0.0f;
     characterLowpassState.fill (0.0f);
-    flexModPhase = 0.0f;
+    voltageSagEnvelope = 0.0f;
+    voltageSagGain = 1.0f;
 
     // Three milliseconds of lookahead with linked peak detection and smooth release.
     outputDelaySamples = static_cast<size_t> (juce::jmax (1, juce::roundToInt (fs * 0.003f)));
@@ -160,8 +149,9 @@ void FuturoSpringAudioProcessor::releaseResources()
 {
     for (auto& line : diffusers) line.clear();
     for (auto& line : resonators) line.clear();
-    for (auto& channel : characterBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
     characterLowpassState.fill (0.0f);
+    voltageSagEnvelope = 0.0f;
+    voltageSagGain = 1.0f;
     for (auto& channel : outputDelayBuffers) std::fill (channel.begin(), channel.end(), 0.0f);
     outputPeakEnvelope = 0.0f;
     resonatorDamping.fill (0.0f);
@@ -182,20 +172,6 @@ float FuturoSpringAudioProcessor::processDiffuser (int channel, int mode, float 
         x = y;
     }
     return x;
-}
-
-float FuturoSpringAudioProcessor::readCharacterDelay (int channel, float delaySamples) const noexcept
-{
-    if (characterBufferSize < 4) return 0.0f;
-    delaySamples = juce::jlimit (1.0f, static_cast<float> (characterBufferSize - 2), delaySamples);
-    const float readPosition = static_cast<float> (characterWritePosition) - delaySamples;
-    const float flooredPosition = std::floor (readPosition);
-    const int index0 = wrapIndex (static_cast<int> (flooredPosition), static_cast<int> (characterBufferSize));
-    const int index1 = (index0 + 1) % static_cast<int> (characterBufferSize);
-    const float fraction = readPosition - flooredPosition;
-    const auto& data = characterBuffers[static_cast<size_t> (channel)];
-    return data[static_cast<size_t> (index0)]
-         + fraction * (data[static_cast<size_t> (index1)] - data[static_cast<size_t> (index0)]);
 }
 
 float FuturoSpringAudioProcessor::saturate (float input, float amount) const noexcept
@@ -228,7 +204,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const int outputChannels = juce::jmin (maxChannels, getTotalNumOutputChannels());
     const int inputChannels = juce::jmin (maxChannels, getTotalNumInputChannels());
     const int numSamples = buffer.getNumSamples();
-    if (inputChannels < 1 || outputChannels < 1 || characterBufferSize < 4 || outputDelaySamples < 1) return;
+    if (inputChannels < 1 || outputChannels < 1 || outputDelaySamples < 1) return;
     for (int channel = inputChannels; channel < outputChannels; ++channel)
         buffer.clear (channel, 0, numSamples);
 
@@ -241,6 +217,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float fs = static_cast<float> (currentSampleRate);
     const float inputLPAlpha = 1.0f - std::exp (-twoPi * 2300.0f / fs);
     const float wetPresenceAlpha = 1.0f - std::exp (-twoPi * 1300.0f / fs);
+    const float sagEnvelopeAttack = 1.0f - std::exp (-1.0f / (0.0025f * fs));
+    const float sagEnvelopeRelease = 1.0f - std::exp (-1.0f / (0.220f * fs));
+    const float sagGainAttack = 1.0f - std::exp (-1.0f / (0.006f * fs));
+    const float sagGainRelease = 1.0f - std::exp (-1.0f / (0.180f * fs));
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -250,12 +230,6 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         smoothCharacter += parameterSmoothing * (targetCharacter - smoothCharacter);
         smoothTone += parameterSmoothing * (targetTone - smoothTone);
         smoothMode += parameterSmoothing * (targetMode - smoothMode);
-
-        // Slow, shallow feedback modulation gives FLEX a moving, elastic spring-bounce.
-        const float flexMotion = std::sin (flexModPhase) * (0.020f + 0.055f * smoothIntensity);
-        flexModPhase += twoPi * (0.38f + 0.40f * smoothIntensity) / fs;
-        if (flexModPhase >= twoPi)
-            flexModPhase -= twoPi;
 
         const float dryL = buffer.getSample (0, n);
         const float dryR = inputChannels > 1 ? buffer.getSample (1, n) : dryL;
@@ -297,9 +271,7 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                      : mode == 1 ? (0.50f + 0.34f * smoothIntensity)
                                                  : (0.56f + 0.27f * smoothIntensity);
                 const float excitation = mode == 0 ? 0.24f : mode == 1 ? 0.38f : 0.19f;
-                const float highFeedback = mode == 0 ? 0.38f
-                                         : mode == 1 ? juce::jlimit (0.78f, 0.95f, 0.86f + flexMotion)
-                                                     : 0.16f;
+                const float highFeedback = mode == 0 ? 0.38f : mode == 1 ? 0.86f : 0.16f;
                 const float crossFeedback = mode == 0 ? 0.035f : mode == 1 ? 0.095f : 0.045f;
                 const float toneBase = mode == 0 ? 600.0f : mode == 1 ? 800.0f : 360.0f;
                 const float toneSpan = mode == 0 ? 10800.0f : mode == 1 ? 14000.0f : 4200.0f;
@@ -362,76 +334,50 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 wetEarly[channel] += wetEarlyByMode[mode][channel] * modeWeights[mode];
             }
 
-        // Keep a clean copy for modes whose character is modulation-only.
-        // FLEX intentionally stores processed output to create a controlled elastic tail.
+        // Character processing is wet-only: the dry path is never time-shifted,
+        // pitch-modulated, widened or filtered by these signatures.
         float wet[2] { wetEarly[0] + wetTail[0], wetEarly[1] + wetTail[1] };
-        const float characterInputWet[2] { wet[0], wet[1] };
-
         const float character = juce::jlimit (0.0f, 1.0f, smoothCharacter);
-        const float characterRate = modePosition < 0.5f ? (0.20f + 0.42f * character)
-                                   : modePosition < 1.5f ? (0.16f + 0.27f * character)
-                                                         : (0.055f + 0.13f * character);
 
         if (modePosition < 0.5f)
         {
-            // CLASSIC / WOBBLE: slow, tape-like modulation in the wet field.
+            // CLASSICUS: controllable vintage spring drive, with no time modulation.
+            // The asymmetric transfer adds harmonics while preserving the timing.
             for (int channel = 0; channel < inputChannels; ++channel)
-            {
-                const float phase = characterPhase + static_cast<float> (channel) * 0.90f;
-                const float delay = fs * (0.015f + std::sin (phase) * 0.008f * character);
-                const float moving = readCharacterDelay (channel, delay);
-                const float amount = character * (0.48f + 0.24f * character);
-                // A normalized wet blend keeps WOBBLE's motion from raising average level.
-                wet[channel] = wet[channel] * (1.0f - amount) + moving * amount;
-                wet[channel] *= 1.0f + 0.05f * character * std::sin (phase + 0.7f);
-            }
+                wet[channel] = saturateVintage (wet[channel], 2.0f + 10.0f * character
+                                                              + 0.35f * smoothSaturation);
         }
         else if (modePosition < 1.5f)
         {
-            // FLEX / BLOOM: an elastic spring rebound instead of a doubler/flanger.
-            // A modulated 25-65ms feedback path blooms into quieter rebounds.
-            // Its loop coefficient stays below 0.88, allowing the repeats to decay.
+            // NOVUS / VOLTAGE SAG: supply-style amplitude droop and slow recovery.
+            // The detector controls level only; no moving delay or pitch shift is used.
+            const float inputPeak = juce::jmax (std::abs (shaped[0]), std::abs (shaped[1]));
+            const float envelopeCoefficient = inputPeak > voltageSagEnvelope
+                                            ? sagEnvelopeAttack : sagEnvelopeRelease;
+            voltageSagEnvelope += envelopeCoefficient * (inputPeak - voltageSagEnvelope);
+            const float normalizedLoad = voltageSagEnvelope / (voltageSagEnvelope + 0.22f);
+            const float sagTarget = 1.0f - 0.48f * character * normalizedLoad;
+            const float sagCoefficient = sagTarget < voltageSagGain ? sagGainAttack : sagGainRelease;
+            voltageSagGain += sagCoefficient * (sagTarget - voltageSagGain);
             for (int channel = 0; channel < inputChannels; ++channel)
-            {
-                const float phase = characterPhase + static_cast<float> (channel) * 0.72f;
-                const float delay = fs * (0.045f + 0.020f * character * std::sin (phase));
-                const float own = readCharacterDelay (channel, delay);
-                const float other = inputChannels > 1
-                    ? readCharacterDelay (1 - channel, delay * 0.96f) : own;
-                const float rebound = own * 0.84f + other * 0.16f;
-                const float feedback = character * (0.56f + 0.32f * character);
-                wet[channel] = wet[channel] * (1.0f - 0.20f * character)
-                             + rebound * feedback;
-            }
+                wet[channel] *= voltageSagGain;
         }
         else
         {
-            // DREAM / MAGIC: nostalgic tape memory with a slow, dark, cross-fed halo.
+            // SOMNIUM / HALO: a fixed, dark spectral halo on the wet return only.
+            // One-pole smoothing changes colour but never delay time or pitch.
             for (int channel = 0; channel < inputChannels; ++channel)
             {
-                const float phase = characterPhase + static_cast<float> (channel) * 1.13f;
-                const float delay = fs * (0.060f + 0.024f * character * std::sin (phase)
-                                          + static_cast<float> (channel) * 0.008f);
-                const float own = readCharacterDelay (channel, delay);
-                const float other = inputChannels > 1
-                    ? readCharacterDelay (1 - channel, delay * 0.91f) : own;
-                const float memory = own * 0.72f + other * 0.28f;
-                const float cutoff = 3400.0f - 1900.0f * character;
+                const float cutoff = 4200.0f - 2500.0f * character;
                 const float alpha = 1.0f - std::exp (-twoPi * cutoff / fs);
-                characterLowpassState[static_cast<size_t> (channel)] += alpha
-                    * (memory - characterLowpassState[static_cast<size_t> (channel)]);
-                wet[channel] = wet[channel] * (1.0f - 0.22f * character)
-                             + characterLowpassState[static_cast<size_t> (channel)] * (0.72f * character);
+                auto& halo = characterLowpassState[static_cast<size_t> (channel)];
+                halo += alpha * (wet[channel] - halo);
+                wet[channel] = wet[channel] * (1.0f - 0.34f * character)
+                             + halo * (0.62f * character);
             }
         }
 
-        characterPhase += twoPi * characterRate / fs;
-        if (characterPhase >= twoPi)
-            characterPhase -= twoPi;
-
-        // Capture the feedback signal before the output tone shelf. This keeps TONE
-        // from multiplying the feedback loop and preserves a decaying, clean tail.
-        const float characterFeedbackWet[2] { wet[0], wet[1] };
+        // Tone affects only the spring return and never enters a feedback loop.
 
         // DREAM widens only the recombined wet field while keeping the centre stable.
         if (inputChannels > 1 && modePosition > 1.0f)
@@ -453,12 +399,6 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             const float highBandGain = 0.28f + 1.18f * std::pow (smoothTone, 1.10f);
             wet[channel] = low + (wet[channel] - low) * highBandGain;
         }
-
-        // FLEX feeds its processed output back into the character buffer; other modes
-        // store the clean spring field to keep their movement effects from self-building.
-        for (int channel = 0; channel < inputChannels; ++channel)
-            characterBuffers[static_cast<size_t> (channel)][characterWritePosition]
-                = (modePosition >= 0.5f && modePosition < 1.5f) ? characterFeedbackWet[channel] : characterInputWet[channel];
 
         const float wetL = wet[0];
         const float wetR = inputChannels > 1 ? wet[1] : wetL;
@@ -482,7 +422,6 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         if (outputChannels > 1) buffer.setSample (1, n, delayedR * limiterGain);
 
         if (++outputDelayWritePosition >= outputDelaySamples) outputDelayWritePosition = 0;
-        if (++characterWritePosition >= characterBufferSize) characterWritePosition = 0;
     }
 }
 
