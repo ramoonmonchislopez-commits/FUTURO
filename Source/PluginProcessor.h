@@ -62,12 +62,9 @@ private:
     std::array<float, maxChannels> wetPresenceLowpassState {};
     std::array<float, maxChannels> previousInput {};
 
-    std::array<std::vector<float>, maxChannels> characterBuffers;
-    size_t characterWritePosition = 0;
-    size_t characterBufferSize = 0;
-    float characterPhase = 0.0f;
-    float flexModPhase = 0.0f;
     std::array<float, maxChannels> characterLowpassState {};
+    float voltageSagEnvelope = 0.0f;
+    float voltageSagGain = 1.0f;
 
     // Linked stereo lookahead limiter preserves headroom without intentional saturation.
     std::array<std::vector<float>, maxChannels> outputDelayBuffers;
@@ -86,7 +83,6 @@ private:
     float parameterSmoothing = 0.002f;
 
     float processDiffuser (int channel, int mode, float input, float coefficient) noexcept;
-    float readCharacterDelay (int channel, float delaySamples) const noexcept;
     float saturate (float input, float amount) const noexcept;
     float saturateVintage (float input, float amount) const noexcept;
 
