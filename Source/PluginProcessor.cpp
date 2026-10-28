@@ -430,8 +430,8 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         const float wetBase[2] { wetEarly[0] + wetTail[0], wetEarly[1] + wetTail[1] };
         float wet[2] {};
         const float character = juce::jlimit (0.0f, 1.0f, smoothCharacter);
-        const float characterCurve = std::pow (character, 0.80f);
-        const float characterDepth = std::pow (character, 0.76f);
+        const float characterCurve = std::pow (character, 0.68f);
+        const float characterDepth = std::pow (character, 0.68f);
 
         // Keep the Novus detector tracking in every mode; switching back to it will not
         // resume from an old envelope or stale gain value.
@@ -440,36 +440,36 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                         ? sagEnvelopeAttack : sagEnvelopeRelease;
         voltageSagEnvelope += envelopeCoefficient * (inputPeak - voltageSagEnvelope);
         const float normalizedLoad = voltageSagEnvelope / (voltageSagEnvelope + 0.16f);
-        const float sagTarget = 1.0f - 0.68f * characterDepth * normalizedLoad;
+        const float sagTarget = 1.0f - 0.74f * characterDepth * normalizedLoad;
         const float sagCoefficient = sagTarget < voltageSagGain ? sagGainAttack : sagGainRelease;
         voltageSagGain += sagCoefficient * (sagTarget - voltageSagGain);
 
         for (int channel = 0; channel < inputChannels; ++channel)
         {
             // CLASSICUS: warm, rounded spring/tape drive and character-controlled damping.
-            float classicus = saturateVintage (wetBase[channel] * (1.0f + 0.25f * character),
-                                                2.2f + 10.5f * characterCurve + 0.65f * smoothSaturation);
-            const float vintageCutoff = 14000.0f - 9000.0f * character;
+            float classicus = saturateVintage (wetBase[channel] * (1.0f + 0.28f * character),
+                                                2.2f + 12.0f * characterCurve + 0.65f * smoothSaturation);
+            const float vintageCutoff = 14000.0f - 9500.0f * character;
             const float vintageAlpha = 1.0f - std::exp (-twoPi * vintageCutoff / fs);
             auto& vintage = classicusToneState[static_cast<size_t> (channel)];
             vintage += vintageAlpha * (classicus - vintage);
-            classicus = classicus * (1.0f - 0.58f * character)
-                      + vintage * (0.58f * character);
+            classicus = classicus * (1.0f - 0.64f * character)
+                      + vintage * (0.64f * character);
 
             // NOVUS: power-stage compression precedes the slow voltage-sag recovery.
-            float novus = saturateNovus (wetBase[channel] * (1.0f + 0.12f * characterDepth),
-                                          2.0f + smoothSaturation * 1.05f + 4.0f * characterDepth);
+            float novus = saturateNovus (wetBase[channel] * (1.0f + 0.16f * characterDepth),
+                                          2.0f + smoothSaturation * 1.05f + 5.0f * characterDepth);
             novus *= voltageSagGain;
 
             // SOMNIUM: softer peak rounding follows its fixed, dark spectral halo.
-            const float haloCutoff = 4200.0f - 2500.0f * character;
+            const float haloCutoff = 4200.0f - 2400.0f * character;
             const float haloAlpha = 1.0f - std::exp (-twoPi * haloCutoff / fs);
             auto& halo = characterLowpassState[static_cast<size_t> (channel)];
             halo += haloAlpha * (wetBase[channel] - halo);
-            float somnium = wetBase[channel] * (1.0f - 0.34f * character)
-                          + halo * (0.62f * character);
+            float somnium = wetBase[channel] * (1.0f - 0.40f * character)
+                          + halo * (0.72f * character);
             somnium = saturateSomnium (somnium, 1.6f + smoothSaturation * 0.85f
-                                                   + 3.2f * characterDepth);
+                                                   + 4.0f * characterDepth);
 
             wet[channel] = classicus * modeWeights[0]
                          + novus * modeWeights[1]
