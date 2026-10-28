@@ -321,9 +321,12 @@ int main()
         std::array<double, 4> energy {};
         constexpr int trimTestSamples = static_cast<int> (testRate);
         constexpr int trimWarmupSamples = static_cast<int> (0.20 * testRate);
-        juce::AudioBuffer<float> inputBuffers[4] {
-            juce::AudioBuffer<float> (2, blockSize), juce::AudioBuffer<float> (2, blockSize),
-            juce::AudioBuffer<float> (2, blockSize), juce::AudioBuffer<float> (2, blockSize)
+        juce::AudioBuffer<float> inputUnityBuffer (2, blockSize);
+        juce::AudioBuffer<float> inputBoostBuffer (2, blockSize);
+        juce::AudioBuffer<float> outputUnityBuffer (2, blockSize);
+        juce::AudioBuffer<float> outputBoostBuffer (2, blockSize);
+        std::array<juce::AudioBuffer<float>*, 4> inputBuffers {
+            &inputUnityBuffer, &inputBoostBuffer, &outputUnityBuffer, &outputBoostBuffer
         };
         std::array<FuturoSpringAudioProcessor*, 4> trimProcessors {
             &inputUnity, &inputBoost, &outputUnity, &outputBoost
@@ -337,17 +340,17 @@ int main()
                 {
                     const float sample = 0.03f * std::sin (juce::MathConstants<float>::twoPi
                         * 220.0f * static_cast<float> (offset + i) / static_cast<float> (testRate));
-                    inputBuffers[channel].setSample (0, i, sample);
+                    inputBuffers[static_cast<size_t> (channel)]->setSample (0, i, sample);
                     inputBuffers[channel].setSample (1, i, sample);
                 }
 
             for (int channel = 0; channel < 4; ++channel)
             {
-                trimProcessors[static_cast<size_t> (channel)]->processBlock (inputBuffers[channel], trimMidi);
+                trimProcessors[static_cast<size_t> (channel)]->processBlock (*inputBuffers[static_cast<size_t> (channel)], trimMidi);
                 if (offset >= trimWarmupSamples)
                     for (int i = 0; i < count; ++i)
                     {
-                        const double sample = inputBuffers[channel].getSample (0, i);
+                        const double sample = inputBuffers[static_cast<size_t> (channel)]->getSample (0, i);
                         energy[static_cast<size_t> (channel)] += sample * sample;
                     }
             }
