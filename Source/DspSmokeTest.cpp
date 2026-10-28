@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -467,6 +468,50 @@ int main()
         std::cout << "PASS: dry path isolation with DRIVE extremes; max delta=" << maxDryDifference << "\n";
         dryA.releaseResources();
         dryB.releaseResources();
+    }
+
+    // Invalid host samples must be contained without poisoning subsequent DSP state.
+    {
+        FuturoSpringAudioProcessor processor;
+        setParameter (processor, "mix", 1.0f);
+        setParameter (processor, "fiuso", 1.0f);
+        processor.prepareToPlay (testRate, blockSize);
+        juce::AudioBuffer<float> buffer (2, blockSize);
+        juce::MidiBuffer midi;
+        buffer.clear();
+        buffer.setSample (0, 0, std::numeric_limits<float>::quiet_NaN());
+        buffer.setSample (1, 0, std::numeric_limits<float>::infinity());
+        for (int i = 1; i < blockSize; ++i)
+        {
+            const float sample = 0.1f * std::sin (juce::MathConstants<float>::twoPi
+                * 220.0f * static_cast<float> (i) / static_cast<float> (testRate));
+            buffer.setSample (0, i, sample);
+            buffer.setSample (1, i, sample);
+        }
+        processor.processBlock (buffer, midi);
+        bool finite = true;
+        for (int channel = 0; channel < 2; ++channel)
+            for (int i = 0; i < blockSize; ++i)
+                finite = finite && std::isfinite (buffer.getSample (channel, i));
+        buffer.clear();
+        for (int i = 0; i < blockSize; ++i)
+        {
+            const float sample = 0.1f * std::sin (juce::MathConstants<float>::twoPi
+                * 220.0f * static_cast<float> (blockSize + i) / static_cast<float> (testRate));
+            buffer.setSample (0, i, sample);
+            buffer.setSample (1, i, sample);
+        }
+        processor.processBlock (buffer, midi);
+        for (int channel = 0; channel < 2; ++channel)
+            for (int i = 0; i < blockSize; ++i)
+                finite = finite && std::isfinite (buffer.getSample (channel, i));
+        if (! finite)
+        {
+            std::cerr << "FAIL: invalid input poisoned DSP output or subsequent state\\n";
+            return 17;
+        }
+        std::cout << "PASS: invalid host samples contained; DSP state remains finite\\n";
+        processor.releaseResources();
     }
 
     std::cout << "DSP smoke tests passed: finite signal, bounded peaks, decaying tails, distinct modes, dry pitch lock, FIUSO harmonic layer.\n";
