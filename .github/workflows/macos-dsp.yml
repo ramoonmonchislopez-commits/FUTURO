@@ -34,3 +34,31 @@ jobs:
 
       - name: Run DSP regression tests
         run: ./build/FUTURO_DSP_SMOKE_TEST
+
+      - name: Package macOS AU and VST3 installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^project(SPIRITUS_SPRING VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          test -n "$VERSION"
+          ARTEFACTS="build/FUTURO_SPRING_artefacts/Release"
+          AU="$ARTEFACTS/AU/Spiritus Spring Reverb.component"
+          VST3="$ARTEFACTS/VST3/Spiritus Spring Reverb.vst3"
+          test -d "$AU"
+          test -d "$VST3"
+          STAGE="$PWD/build/pkg-root"
+          mkdir -p "$STAGE/Library/Audio/Plug-Ins/Components" "$STAGE/Library/Audio/Plug-Ins/VST3"
+          ditto "$AU" "$STAGE/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component"
+          ditto "$VST3" "$STAGE/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3"
+          pkgbuild --root "$STAGE" --identifier "audio.spiritus.springreverb" --version "$VERSION" --install-location / "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg"
+          shasum -a 256 "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg" > "build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg.sha256"
+
+      - name: Upload installer package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spiritus-Spring-Reverb-macOS-arm64
+          path: |
+            build/Spiritus-Spring-Reverb-*-macOS-arm64.pkg
+            build/Spiritus-Spring-Reverb-*-macOS-arm64.pkg.sha256
+          if-no-files-found: error
+          retention-days: 14
