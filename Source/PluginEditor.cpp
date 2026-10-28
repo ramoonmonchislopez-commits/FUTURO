@@ -106,6 +106,15 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     styleKnob (tone, "TONE");
     styleFader (inputGain, "IN");
     styleFader (outputGain, "OUT");
+    for (auto* label : { &inputGainLabel, &outputGainLabel })
+    {
+        label->setFont (juce::Font (juce::FontOptions (9.0f, juce::Font::bold)));
+        label->setColour (juce::Label::textColourId, ink.withAlpha (0.86f));
+        label->setJustificationType (juce::Justification::centredLeft);
+        addAndMakeVisible (*label);
+    }
+    inputGainLabel.setText ("IN", juce::dontSendNotification);
+    outputGainLabel.setText ("OUT", juce::dontSendNotification);
 
     classic.setButtonText ("CLASSICUS");
     flex.setButtonText ("NOVUS");
@@ -167,6 +176,7 @@ void FuturoSpringAudioProcessorEditor::styleFader (juce::Slider& slider, const j
     slider.setName (label);
     slider.setSliderStyle (juce::Slider::LinearHorizontal);
     slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 18);
+    slider.setTextValueSuffix (" dB");
     slider.setLookAndFeel (&knobLookAndFeel);
     slider.setColour (juce::Slider::trackColourId, teal);
     slider.setColour (juce::Slider::thumbColourId, ink);
@@ -385,8 +395,10 @@ void FuturoSpringAudioProcessorEditor::resized()
     classic.setBounds (left, 139, 116, 35);
     flex.setBounds (left, 183, 116, 35);
     dream.setBounds (left, 227, 116, 35);
-    inputGain.setBounds (left, 292, 126, 24);
-    outputGain.setBounds (left, 330, 126, 24);
+    inputGainLabel.setBounds (left, 276, 42, 14);
+    inputGain.setBounds (left, 290, 126, 24);
+    outputGainLabel.setBounds (left, 314, 42, 14);
+    outputGain.setBounds (left, 328, 126, 24);
     fiuso.setBounds (juce::roundToInt (width * 0.56f) - 67, 389, 134, 34);
 
     const float fractions[5] { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f };
