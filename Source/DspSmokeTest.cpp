@@ -26,12 +26,13 @@ namespace
         bool finite = true;
     };
 
-    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f, float mix = 1.0f, float saturation = 0.0f)
+    RenderResult renderImpulse (int mode, float character = 0.0f, float tone = 0.65f, float intensity = 1.0f, float inputLevel = 1.0f, float mix = 1.0f, float saturation = 0.0f, bool fiusoEnabled = false)
     {
         FuturoSpringAudioProcessor processor;
         setParameter (processor, "mix", mix);
         setParameter (processor, "intensity", intensity);
         setParameter (processor, "saturation", saturation);
+        setParameter (processor, "fiuso", fiusoEnabled ? 1.0f : 0.0f);
         setParameter (processor, "character", character);
         setParameter (processor, "tone", tone);
         setParameter (processor, "mode", static_cast<float> (mode));
@@ -270,6 +271,22 @@ int main()
         }
         std::cout << "PASS: mode " << mode << " stressed wet feedback peak="
                   << stressed.peak << " latePeak=" << stressed.latePeak << "\n";
+    }
+
+    // FIUSO's parallel harmonic layers must also remain bounded under a hot impulse.
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        const auto stressedFiuso = renderImpulse (mode, 65.0f, 0.70f, 1.0f, 8.0f, 1.0f, 18.0f, true);
+        if (! stressedFiuso.finite || stressedFiuso.peak > 0.985f || stressedFiuso.latePeak > 0.001f)
+        {
+            std::cerr << "FAIL: FIUSO stress unstable in mode " << mode
+                      << "; finite=" << stressedFiuso.finite
+                      << " peak=" << stressedFiuso.peak
+                      << " latePeak=" << stressedFiuso.latePeak << "\n";
+            return 15;
+        }
+        std::cout << "PASS: FIUSO stress mode " << mode << " peak="
+                  << stressedFiuso.peak << " latePeak=" << stressedFiuso.latePeak << "\n";
     }
 
     // FIUSO must add a measurable harmonic layer to the wet spring, without instability.
