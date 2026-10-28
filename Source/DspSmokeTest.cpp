@@ -341,7 +341,7 @@ int main()
                     const float sample = 0.03f * std::sin (juce::MathConstants<float>::twoPi
                         * 220.0f * static_cast<float> (offset + i) / static_cast<float> (testRate));
                     inputBuffers[static_cast<size_t> (channel)]->setSample (0, i, sample);
-                    inputBuffers[channel].setSample (1, i, sample);
+                    inputBuffers[static_cast<size_t> (channel)]->setSample (1, i, sample);
                 }
 
             for (int channel = 0; channel < 4; ++channel)
