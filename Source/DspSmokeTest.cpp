@@ -276,10 +276,12 @@ int main()
         if (! somniumShort.finite || ! somniumExpanded.finite
             || somniumShort.peak > 0.985f || somniumExpanded.peak > 0.985f
             || expandedTailRms < 0.0001
-            || expandedTailRms < shortTailRms * 1.08)
+            || expandedTailRms < shortTailRms * 1.08
+            || somniumExpanded.stereoDifferenceRms < 0.00001)
         {
             std::cerr << "FAIL: Somnium tail failed to bloom cleanly; short RMS=" << shortTailRms
-                      << " expanded RMS=" << expandedTailRms << "\n";
+                      << " expanded RMS=" << expandedTailRms
+                      << " stereo difference=" << somniumExpanded.stereoDifferenceRms << "\n";
             return 20;
         }
         std::cout << "PASS: Somnium tail expansion short RMS=" << shortTailRms

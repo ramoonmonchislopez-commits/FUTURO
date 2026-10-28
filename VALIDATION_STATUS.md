@@ -6,7 +6,7 @@ Implemented in this branch:
 - Editable factory preset menu with host parameter notifications.
 - Perceptually shaped Character response, checked at intermediate settings in all three modes.
 - Fiuso's rectifier state removes DC without discarding lower harmonic body; a Tone-controlled low-pass reduces brittle upper harmonics before the parallel saturation stages.
-- Somnium uses more diffuse and decorrelated stereo delay patterns, a slightly longer feedback range, more tail level, and lower early-reflection emphasis.
+- Somnium uses more diffuse and decorrelated stereo delay patterns, a feedback curve that remains below unity, more tail level, and lower early-reflection emphasis.
 - DSP regressions for finite output, bounded peaks, stable decay, Character travel, Fiuso audibility, and Somnium tail growth.
 
 Not yet verified: successful CI on the final commit, AU/VST3 host validation, Ableton Live loading, listening-based quality, CPU use, real-time safety, and state/automation across full DAW sessions.

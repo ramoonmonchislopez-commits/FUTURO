@@ -10,7 +10,7 @@ The three modes are **Classicus / Spring** (rounded, zero-centred vintage drive)
 
 A **FACTORY PRESETS** menu provides five editable starting points: Vintage Bloom, Studio Coil, Voltage Sag, Dark Halo, and Fiuso Temple. Choosing a preset applies values through the host parameter API; you can then tweak any control and save the result with the DAW project.
 
-Version 0.14.0 also makes Character more responsive through its full travel, gives Fiuso a true low-frequency DC blocker plus Tone-controlled harmonic softening, and makes Somnium's tail denser and more spacious through increased diffusion, stereo decorrelation, a restrained onset, and a modestly longer feedback decay.
+Version 0.14.0 also makes Character more responsive through its full travel, gives Fiuso a true low-frequency DC blocker plus Tone-controlled harmonic softening, and makes Somnium's tail denser and more spacious through increased diffusion, stereo decorrelation, a restrained onset, and a longer feedback range capped below unity.
 
 ## Build and test locally on macOS
 

@@ -350,11 +350,12 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const float diffuserCoefficient = mode == 0 ? 0.68f : mode == 1 ? 0.39f : 0.83f;
                 const float diffused = processDiffuser (channel, mode, source, diffuserCoefficient);
 
-                // INTENSITY moves the useful decay range more decisively, while all
-                // loop feedback stays below unity to keep the spring tail stable.
+                // INTENSITY moves the useful decay range more decisively. Somnium
+                // approaches 0.91 feedback at maximum Intensity, remaining below unity
+                // while letting the diffuse cloud sustain rather than fade too quickly.
                 const float feedback = mode == 0 ? (0.48f + 0.39f * intensityCurve)
                                      : mode == 1 ? (0.46f + 0.40f * intensityCurve)
-                                                 : (0.50f + 0.35f * intensityCurve);
+                                                 : (0.54f + 0.37f * intensityCurve);
                 const float excitation = mode == 0 ? 0.24f : mode == 1 ? 0.38f : 0.19f;
                 const float highFeedback = mode == 0 ? 0.38f : mode == 1 ? 0.86f : 0.16f;
                 const float crossFeedback = mode == 0 ? 0.035f : mode == 1 ? 0.095f : 0.060f;
@@ -404,10 +405,10 @@ void FuturoSpringAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 // Presence comes from excitation and tone, not brute-force output gain.
                 const float modeGain = mode == 0 ? (1.48f + 0.38f * intensityCurve)
                                       : mode == 1 ? (1.58f + 0.45f * intensityCurve)
-                                                  : (1.27f + 0.33f * intensityCurve);
+                                                  : (1.36f + 0.42f * intensityCurve);
                 // Keep the first splash restrained so the more spacious Somnium tail
                 // can bloom around the source instead of crowding the dry attack.
-                const float earlyGain = mode == 0 ? 0.24f : mode == 1 ? 0.26f : 0.21f;
+                const float earlyGain = mode == 0 ? 0.24f : mode == 1 ? 0.26f : 0.18f;
                 const float tail = output * modeGain;
                 if (mode == 0)
                 {
