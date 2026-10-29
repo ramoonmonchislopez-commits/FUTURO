@@ -3,7 +3,8 @@
 Status: engineering/test build; not a verified commercial release.
 
 Implemented in this branch:
-- Worn chalkboard-metal interface with deterministic chalk/pastel grain across the panel, rotary dials, and angel shapes; aged screw heads and scratched metallic bevels.
+- Recreated the supplied `spiritus_v2.html` layout in the JUCE editor: fixed 880×640 ivory paper panel, thin copper border, corner screws, top-centred three-mode tabs, centred angel stage, four side controls, large lower-centred Intensity, preset at lower left and Fiūso at lower right.
+- Fine deterministic pastel grain on paper, knobs and angel illustrations; engraved blue cloud curls and copper stars keep the old-print/art-book feel without the heavy dark-metal finish.
 - Corrected display name to SPIRITUS and kept the three audio modes only: CLASSICUS, NOVUS and SOMNIUM.
 - Smoothed Intensity-to-mood animation: low settings use gentler sad faces and tears; high settings ease into mischievous smiles, refined horns and devil tail, warmer orbital accents and wider wings.
 - NOVUS uses marked bat wings; SOMNIUM has an astronaut helmet with a translucent visor and oxygen hose; CLASSICUS retains a copper spark and halo.

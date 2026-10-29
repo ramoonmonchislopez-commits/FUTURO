@@ -33,7 +33,7 @@ private:
     FuturoKnobLookAndFeel knobLookAndFeel;
     juce::Slider mix, intensity, saturation, character, tone, inputGain, outputGain;
     juce::TextButton classic { "CLASSICUS" }, flex { "NOVUS" }, dream { "SOMNIUM" }, fiuso { "FIUSO" };
-    juce::Label heading, subheading, inputGainLabel, outputGainLabel;
+    juce::Label heading, subheading, inputGainLabel, outputGainLabel, presetLabel, moodCaption;
     juce::ComboBox presetMenu;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
