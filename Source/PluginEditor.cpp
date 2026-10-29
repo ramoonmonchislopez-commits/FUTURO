@@ -382,16 +382,16 @@ FuturoSpringAudioProcessorEditor::FuturoSpringAudioProcessorEditor (FuturoSpring
     character.setColour (juce::Slider::rotarySliderFillColourId, green);
     tone.setColour (juce::Slider::rotarySliderFillColourId, violet);
 
-    mix.setTextFromValueFunction ([] (double value) { return juce::String (juce::roundToInt (value * 100.0)) + "%"; });
-    mix.setValueFromTextFunction ([] (const juce::String& text) { return text.getDoubleValue() / 100.0; });
-    saturation.setTextFromValueFunction ([] (double value) { return juce::String (juce::roundToInt (value / 18.0 * 100.0)) + "%"; });
-    saturation.setValueFromTextFunction ([] (const juce::String& text) { return text.getDoubleValue() * 0.18; });
-    intensity.setTextFromValueFunction ([] (double value) { return juce::String (juce::roundToInt (value * 100.0)) + "%"; });
-    intensity.setValueFromTextFunction ([] (const juce::String& text) { return text.getDoubleValue() / 100.0; });
-    character.setTextFromValueFunction ([] (double value) { return juce::String (juce::roundToInt (value)) + "%"; });
-    character.setValueFromTextFunction ([] (const juce::String& text) { return text.getDoubleValue(); });
-    tone.setTextFromValueFunction ([] (double value) { return juce::String (juce::roundToInt (value * 100.0)) + "%"; });
-    tone.setValueFromTextFunction ([] (const juce::String& text) { return text.getDoubleValue() / 100.0; });
+    mix.textFromValueFunction = [] (double value) { return juce::String (juce::roundToInt (value * 100.0)) + "%"; });
+    mix.valueFromTextFunction = [] (const juce::String& text) { return text.getDoubleValue() / 100.0; });
+    saturation.textFromValueFunction = [] (double value) { return juce::String (juce::roundToInt (value / 18.0 * 100.0)) + "%"; });
+    saturation.valueFromTextFunction = [] (const juce::String& text) { return text.getDoubleValue() * 0.18; });
+    intensity.textFromValueFunction = [] (double value) { return juce::String (juce::roundToInt (value * 100.0)) + "%"; });
+    intensity.valueFromTextFunction = [] (const juce::String& text) { return text.getDoubleValue() / 100.0; });
+    character.textFromValueFunction = [] (double value) { return juce::String (juce::roundToInt (value)) + "%"; });
+    character.valueFromTextFunction = [] (const juce::String& text) { return text.getDoubleValue(); });
+    tone.textFromValueFunction = [] (double value) { return juce::String (juce::roundToInt (value * 100.0)) + "%"; });
+    tone.valueFromTextFunction = [] (const juce::String& text) { return text.getDoubleValue() / 100.0; });
     styleFader (inputGain, "IN");
     styleFader (outputGain, "OUT");
     for (auto* label : { &inputGainLabel, &outputGainLabel })
