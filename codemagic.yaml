@@ -1,0 +1,84 @@
+workflows:
+  futuro-macos-validation:
+    name: FUTURO macOS — DSP tests, AU/VST3 and installer
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: 'improve/warm-clean-dsp-v0.13.0'
+          include: true
+          source: true
+      cancel_previous_builds: false
+
+    scripts:
+      - name: Select Xcode and check build tools
+        script: |
+          set -euo pipefail
+          xcode-select -p
+          xcodebuild -version
+          if ! command -v cmake >/dev/null 2>&1; then
+            command -v brew
+            brew install cmake
+          fi
+          cmake --version
+
+      - name: Configure ARM64 macOS build
+        script: |
+          set -euo pipefail
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build AU, VST3 and DSP regression test
+        script: |
+          set -euo pipefail
+          cmake --build build --config Release \
+            --target FUTURO_SPRING_AU FUTURO_SPRING_VST3 FUTURO_DSP_SMOKE_TEST \
+            --parallel 2
+
+      - name: Run DSP regression tests
+        script: |
+          set -euo pipefail
+          ./build/FUTURO_DSP_SMOKE_TEST
+
+      - name: Package and verify AU/VST3 installer
+        script: |
+          set -euo pipefail
+          VERSION="$(grep '^project(SPIRITUS_SPRING VERSION ' CMakeLists.txt | cut -d' ' -f3)"
+          test -n "$VERSION"
+
+          ARTEFACTS="build/FUTURO_SPRING_artefacts/Release"
+          AU="$ARTEFACTS/AU/Spiritus Spring Reverb.component"
+          VST3="$ARTEFACTS/VST3/Spiritus Spring Reverb.vst3"
+          test -d "$AU"
+          test -d "$VST3"
+
+          # Ad-hoc signatures are suitable for CI validation, not notarized distribution.
+          codesign --force --deep --sign - "$AU"
+          codesign --force --deep --sign - "$VST3"
+          codesign --verify --deep --strict --verbose=2 "$AU"
+          codesign --verify --deep --strict --verbose=2 "$VST3"
+
+          STAGE="$PWD/build/pkg-root"
+          mkdir -p "$STAGE/Library/Audio/Plug-Ins/Components" "$STAGE/Library/Audio/Plug-Ins/VST3"
+          ditto "$AU" "$STAGE/Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component"
+          ditto "$VST3" "$STAGE/Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3"
+
+          PKG="build/Spiritus-Spring-Reverb-${VERSION}-macOS-arm64.pkg"
+          pkgbuild --root "$STAGE" --identifier "audio.spiritus.springreverb" \
+            --version "$VERSION" --install-location / "$PKG"
+
+          pkgutil --payload-files "$PKG" > build/pkg-payload.txt
+          grep -F "Library/Audio/Plug-Ins/Components/Spiritus Spring Reverb.component" build/pkg-payload.txt
+          grep -F "Library/Audio/Plug-Ins/VST3/Spiritus Spring Reverb.vst3" build/pkg-payload.txt
+          shasum -a 256 "$PKG" > "${PKG}.sha256"
+
+    artifacts:
+      - build/Spiritus-Spring-Reverb-*-macOS-arm64.pkg
+      - build/Spiritus-Spring-Reverb-*-macOS-arm64.pkg.sha256
+      - build/pkg-payload.txt

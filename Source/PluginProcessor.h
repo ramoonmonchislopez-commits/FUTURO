@@ -66,6 +66,7 @@ private:
     std::array<float, maxChannels> characterLowpassState {};
     std::array<float, maxChannels> classicusToneState {};
     std::array<float, maxChannels> fiusoRectifierLowpassState {};
+    std::array<float, maxChannels> fiusoToneLowpassState {};
     float voltageSagEnvelope = 0.0f;
     float voltageSagGain = 1.0f;
 

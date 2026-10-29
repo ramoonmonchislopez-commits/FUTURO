@@ -1,9 +1,21 @@
-# FUTURO 0.3.0 validation status
+# SPIRITUS 0.14.0 validation status
 
-Status: engineering build; not a verified commercial release.
+Status: engineering/test build; not a verified commercial release.
 
-Prepared: JUCE CMake project, VST3/AU targets, spring-inspired diffusion and resonator network, wet-path pitch shifter, smoothed parameters, host state recall, and automated macOS ARM64 build.
+Implemented in this branch:
+- Recreated the supplied `spiritus_v2.html` layout in the JUCE editor: fixed 880×640 ivory paper panel, thin copper border, corner screws, top-centred three-mode tabs, centred angel stage, four side controls, large lower-centred Intensity, preset at lower left and Fiūso at lower right.
+- Fine deterministic pastel grain on paper, knobs and angel illustrations; engraved blue cloud curls and copper stars keep the old-print/art-book feel without the heavy dark-metal finish.
+- Corrected display name to SPIRITUS and kept the three audio modes only: CLASSICUS, NOVUS and SOMNIUM.
+- Smoothed Intensity-to-mood animation: low settings use gentler sad faces and tears; high settings ease into mischievous smiles, refined horns and devil tail, warmer orbital accents and wider wings.
+- NOVUS uses marked bat wings; SOMNIUM has an astronaut helmet with a translucent visor and oxygen hose; CLASSICUS retains a copper spark and halo.
+- Editable factory preset menu with host parameter notifications and five more strongly contrasted voices.
+- The uninitialised plug-in opens on Copper Bloom's Classicus reference values; the default APVTS values and factory preset agree.
+- Perceptually shaped Character response, checked at intermediate settings in all three modes.
+- Fiuso's rectifier state removes DC without discarding lower harmonic body; a Tone-controlled low-pass reduces brittle upper harmonics before the parallel saturation stages.
+- Somnium uses more diffuse and decorrelated stereo delay patterns, a feedback ceiling of 0.91 (below unity), more tail level, lower early-reflection emphasis, and gentler outer saturation stages to avoid overdriving the wet return. The regression measures tail bloom after the initial attack and reports each failed condition separately.
+- DSP regressions for finite output, bounded peaks, stable decay, Character travel, Fiuso audibility, and Somnium tail growth.
+- The impulse test waits 150 ms for parameter smoothing and the mode crossfade to settle before injecting audio, so each test actually exercises its requested mode.
 
-Not yet verified: successful build in CI, VST3/AU host validation, Ableton Live loading, listening-based quality, CPU use, real-time safety, and state/automation across sessions.
+Not yet verified: successful CI on the final commit, AU/VST3 host validation, Ableton Live loading, listening-based quality, CPU use, real-time safety, and state/automation across full DAW sessions.
 
-Known limitation: saturation is not oversampled and can alias. The generated test package is unsigned and not notarized. Do not distribute commercially until the audio and packaging checks pass.
+Known limitation: saturation is not oversampled and may alias at extreme settings. The generated test package is ad hoc signed and not notarized. Do not distribute commercially until audio and packaging checks pass.
